@@ -16,9 +16,6 @@ class FlipCardSwiper<T> extends StatefulWidget {
   /// The duration of the downward drag animation.
   final Duration downDragDuration;
 
-  /// The duration of the card collection animation.
-  final Duration collectionDuration;
-
   /// The maximum distance for a drag gesture to trigger animations.
   final double maxDragDistance;
 
@@ -37,12 +34,6 @@ class FlipCardSwiper<T> extends StatefulWidget {
   /// - `visibleIndex`: The index of the card in the visible stack (0 = top).
   final Widget Function(BuildContext context, int index, int visibleIndex)
       cardBuilder;
-
-  /// Whether the card collection animation should start automatically.
-  final bool shouldStartCardCollectionAnimation;
-
-  /// A callback triggered when the card collection animation is complete.
-  final void Function(bool value) onCardCollectionAnimationComplete;
 
   // Offset and scale parameters for the top card.
   final double topCardOffsetStart;
@@ -68,7 +59,6 @@ class FlipCardSwiper<T> extends StatefulWidget {
     required this.cardBuilder,
     this.animationDuration = const Duration(milliseconds: 800),
     this.downDragDuration = const Duration(milliseconds: 300),
-    this.collectionDuration = const Duration(milliseconds: 1000),
     this.maxDragDistance = 220.0,
     this.dragDownLimit = -40.0,
     this.thresholdValue = 0.3,
@@ -85,8 +75,6 @@ class FlipCardSwiper<T> extends StatefulWidget {
     this.thirdCardOffsetEnd = -15.0,
     this.thirdCardScaleStart = 0.9,
     this.thirdCardScaleEnd = 0.95,
-    this.shouldStartCardCollectionAnimation = false,
-    required this.onCardCollectionAnimationComplete,
     super.key,
   });
 
@@ -102,8 +90,6 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>>
   Animation<double>? _animation;
   AnimationController? _downDragController;
   Animation<double>? _downDragAnimation;
-  AnimationController? _cardCollectionAnimationController;
-  Animation<double>? _cardCollectionyOffsetAnimation;
 
   double _startAnimationValue = 0.0;
   double _dragStartPosition = 0.0;
@@ -240,27 +226,6 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>>
       }
     });
 
-    // Start the card collection animation if enabled.
-    if (widget.shouldStartCardCollectionAnimation) {
-      _cardCollectionAnimationController = AnimationController(
-        duration: widget.collectionDuration,
-        vsync: this,
-      );
-
-      _cardCollectionyOffsetAnimation = Tween<double>(
-        begin: 0.0,
-        end: 1.0,
-      ).animate(CurvedAnimation(
-        parent: _cardCollectionAnimationController ??
-            AnimationController(vsync: this),
-        curve: Curves.easeOutCubic,
-      ));
-
-      _cardCollectionAnimationController
-          ?.forward()
-          .then((_) => widget.onCardCollectionAnimationComplete(false));
-    }
-
     _updateCardWidgets();
   }
 
@@ -311,33 +276,6 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>>
 
       _updateCardWidgets();
     }
-
-    if (widget.shouldStartCardCollectionAnimation !=
-        oldWidget.shouldStartCardCollectionAnimation) {
-      if (widget.shouldStartCardCollectionAnimation) {
-        _cardCollectionAnimationController = AnimationController(
-          duration: const Duration(milliseconds: 1000),
-          vsync: this,
-        );
-
-        _cardCollectionyOffsetAnimation = Tween<double>(
-          begin: 0.0,
-          end: 1.0,
-        ).animate(CurvedAnimation(
-          parent: _cardCollectionAnimationController ??
-              AnimationController(vsync: this),
-          curve: Curves.easeOutCubic,
-        ));
-
-        _cardCollectionAnimationController
-            ?.forward()
-            .then((_) => widget.onCardCollectionAnimationComplete(false));
-      } else {
-        _cardCollectionAnimationController?.dispose();
-        _cardCollectionAnimationController = null;
-        _cardCollectionyOffsetAnimation = null;
-      }
-    }
   }
 
   @override
@@ -345,7 +283,6 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>>
     _controller?.dispose();
     _downDragController?.dispose();
     _debounceTimer?.cancel();
-    _cardCollectionAnimationController?.dispose();
     super.dispose();
   }
 
@@ -353,7 +290,6 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>>
   void _onVerticalDragStart(DragStartDetails details) {
     if (_controller?.isAnimating == true ||
         _downDragController?.isAnimating == true ||
-        widget.shouldStartCardCollectionAnimation ||
         _cardData.length == 1) {
       // Do not process the gesture if animating or if there's only one card
       return;
@@ -371,7 +307,6 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>>
     if (_controller?.isAnimating == true ||
         _downDragController?.isAnimating == true ||
         _hasReachedHalf ||
-        widget.shouldStartCardCollectionAnimation ||
         _isAnimationBlocked ||
         _cardData.length == 1) {
       // Do not process the gesture if animating or if the card has reached half or if there's only one card
@@ -433,7 +368,6 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>>
   void _onVerticalDragEnd(DragEndDetails details) {
     if (_controller?.isAnimating == true ||
         _downDragController?.isAnimating == true ||
-        widget.shouldStartCardCollectionAnimation ||
         _isAnimationBlocked ||
         _cardData.length == 1) {
       // Do not process the gesture if animating or if there's only one card
@@ -543,9 +477,6 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>>
           animation: Listenable.merge([
             _controller ?? AnimationController(vsync: this),
             _downDragController ?? AnimationController(vsync: this),
-            if (widget.shouldStartCardCollectionAnimation)
-              _cardCollectionAnimationController ??
-                  AnimationController(vsync: this),
           ]),
           builder: (context, child) {
             return Stack(
@@ -726,20 +657,7 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>>
         return Transform(
           alignment: Alignment.center,
           transform: Matrix4.identity()
-            ..translateByDouble(
-                0.0,
-                widget.shouldStartCardCollectionAnimation &&
-                        _cardCollectionyOffsetAnimation != null
-                    ? _cardCollectionyOffsetAnimation
-                            ?.drive(CurveTween(
-                                curve: Interval((0.4 * (index - 1)), 0.9)))
-                            .drive(CurveTween(curve: Curves.easeOut))
-                            .drive(Tween(begin: yOffset, end: yOffset + 20))
-                            .value ??
-                        0
-                    : yOffset,
-                0,
-                1)
+            ..translateByDouble(0.0, yOffset, 0, 1)
             ..scaleByDouble(scale, scale, 1.0, 1),
           child: child,
         );

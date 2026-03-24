@@ -3,16 +3,10 @@ import 'package:flutter/material.dart';
 
 void main() => runApp(const MyApp());
 
-class MyApp extends StatefulWidget {
+class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  @override
-  State<MyApp> createState() => _MyAppState();
-}
-
-class _MyAppState extends State<MyApp> {
-  bool _shouldPlayAnimation = false;
-  final List<Map<String, dynamic>> cards = [
+  static final List<Map<String, dynamic>> _cards = [
     {'color': Colors.blue, 'text': 'Card 1'},
     {'color': Colors.red, 'text': 'Card 2'},
     {'color': Colors.green, 'text': 'Card 3'},
@@ -31,31 +25,17 @@ class _MyAppState extends State<MyApp> {
       title: 'Card Stack Animation',
       home: Scaffold(
         backgroundColor: const Color(0xFFEEEEEE),
-        floatingActionButton: FloatingActionButton(
-          onPressed: () {
-            setState(() {
-              _shouldPlayAnimation = !_shouldPlayAnimation;
-            });
-          },
-          child: Icon(_shouldPlayAnimation ? Icons.pause : Icons.play_arrow),
-        ),
         body: Center(
           child: FlipCardSwiper(
-            onCardCollectionAnimationComplete: (value) {
-              setState(() {
-                _shouldPlayAnimation = value;
-              });
-            },
-            shouldStartCardCollectionAnimation: _shouldPlayAnimation,
-            cardData: cards,
+            cardData: _cards,
             animationDuration: const Duration(milliseconds: 600),
             downDragDuration: const Duration(milliseconds: 200),
             onCardChange: (index) {},
             cardBuilder: (context, index, visibleIndex) {
-              if (index < 0 || index >= cards.length) {
+              if (index < 0 || index >= _cards.length) {
                 return const SizedBox.shrink();
               }
-              final card = cards[index];
+              final card = _cards[index];
               return AnimatedSwitcher(
                 duration: const Duration(milliseconds: 300),
                 transitionBuilder: (Widget child, Animation<double> animation) {

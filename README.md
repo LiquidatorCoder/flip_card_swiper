@@ -40,9 +40,6 @@
 - **Flip & Swipe Animations:**  
   Easily flip between cards with a vertical drag gesture. Cards smoothly animate through the stack.
 
-- **Card Collection Animations:**  
-  Automatically animate cards into a collection, perfect for onboarding sequences or showcases.
-
 - **Haptic Feedback:**  
   Provide tactile feedback to users as they flip through cards, enhancing user experience.
 
@@ -97,9 +94,6 @@ class MyApp extends StatelessWidget {
             cardData: cards,
             onCardChange: (newIndex) {
               // Do something when the top card changes
-            },
-            onCardCollectionAnimationComplete: (value) {
-              // Triggered when card collection animation finishes
             },
             // Build each card widget
             cardBuilder: (context, index, visibleIndex) {
