@@ -635,9 +635,6 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
         _cardData.length == 1) {
       return;
     }
-    if (_hasReachedHalf) {
-      return;
-    }
 
     final double dragDistance = _dragStartPosition - details.globalPosition.dy;
 
