@@ -1,7 +1,7 @@
 <h1 align="center">Flip Card Swiper</h1>
 
 <p align="center">
-  <b>A customizable, swipeable card widget with smooth flip animations and haptic support.</b>
+  <b>Swipeable cards with flip animations, optional haptics, and a simple API.</b>
 </p><br>
 
 <p align="center">
@@ -23,6 +23,7 @@
   <a href="#features">Features</a> •
   <a href="#installation">Installation</a> •
   <a href="#usage">Usage</a> •
+  <a href="#changelog">Changelog</a> •
   <a href="#license">License</a> •
   <a href="#bugs-or-requests">Bugs or Requests</a>
 </p><br>
@@ -37,35 +38,38 @@
 
 ## Features
 
-- **Flip & Swipe Animations:**  
-  Easily flip between cards with a vertical drag gesture. Cards smoothly animate through the stack.
+- **Flip and swipe:**  
+  Drag up to flip the top card. Motion eases in and out; the second half of the flip stays smooth instead of feeling mushy at the end. After you pass halfway, how long the finish takes depends on how fast you flicked and on **`completionPhaseScale`**. You can also change **`animationDuration`**, **`thresholdValue`** (progress along the drag-past this, releasing can finish the flip even before the halfway point), **`maxDragDistance`**, and optional **`earlyLiftBoost`** / **`rotationStartFraction`** for extra lift at the start of the drag.
 
-- **Haptic Feedback:**  
-  Provide tactile feedback to users as they flip through cards, enhancing user experience. Can be turned off with `enableHaptics: false`.
+- **Gestures that always resolve:**  
+  When you lift your finger, the flip either completes or springs back-you should not get stuck between the two after a partial swipe.
+
+- **Haptics:**  
+  Light feedback while cards move. Turn it off with **`enableHaptics: false`**.
 
 - **Accessibility:**  
-  Basic `Semantics` labels, optional hints, arrow-up when focused, and reduced motion via `MediaQuery.disableAnimations`.
+  Optional labels and hints for assistive technologies, plus support for the platform’s **reduce motion** setting (`MediaQuery.disableAnimations`).
 
-- **Dynamic Card Updates:**  
-  The widget updates card order at mid-animation, allowing endless looping through your card collection.
+- **Reordering:**  
+  Cards swap order halfway through the flip so you can loop through a list without a hard cut.
 
-- **Customizable Scaling & Offsets:**  
-  Fine-tune card positions, scales, and transitions to achieve unique flipping and stacking effects.
+- **Layout:**  
+  Separate scale and offset for the top three cards so you can tune the stack look.
 
-**No extra dependencies or complicated setup—just integrate and start flipping!**
+**No extra dependencies or complicated setup-just integrate and start flipping!**
 
 ---
 
 ## Installation
 
-Add the following line to your `pubspec.yaml`:
+Add this under `dependencies` in `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  flip_card_swiper: ^2.1.3
+  flip_card_swiper: ^2.0.0
 ```
 
-Then, run:
+Fetch packages:
 
 ```bash
 flutter pub get
@@ -96,12 +100,16 @@ class MyApp extends StatelessWidget {
           child: FlipCardSwiper(
             cardData: cards,
             onCardChange: (newIndex) {
-              // Do something when the top card changes
+              // Runs when the top card changes after a flip.
             },
-            // Build each card widget
+            // completionPhaseScale: 1.35,  // optional: longer second half
+            // animationDuration: const Duration(milliseconds: 600),  // default
             cardBuilder: (context, index, visibleIndex) {
               final card = cards[index];
+              // Use the data index (or another stable id) as the key so state
+              // survives when cards move in the stack-not only visibleIndex.
               return Container(
+                key: ValueKey(index),
                 width: 300,
                 height: 200,
                 decoration: BoxDecoration(
@@ -124,6 +132,10 @@ class MyApp extends StatelessWidget {
 
 
 ```
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for version history.
 
 ## License
 
@@ -153,6 +165,6 @@ SOFTWARE.
 
 ## Bugs or Requests
 
-- For bugs, please [open an issue](https://github.com/LiquidatorCoder/flip_card_swiper/issues/new?template=bug_report.md).
-- For features or enhancements, submit a [feature request](https://github.com/LiquidatorCoder/flip_card_swiper/issues/new?template=feature_request.md).
-- PRs are welcome—contributions help make this tool better!
+- [Report a bug](https://github.com/LiquidatorCoder/flip_card_swiper/issues/new?template=bug_report.md).
+- [Request a feature](https://github.com/LiquidatorCoder/flip_card_swiper/issues/new?template=feature_request.md).
+- Pull requests are welcome.

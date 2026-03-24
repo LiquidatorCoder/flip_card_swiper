@@ -36,41 +36,17 @@ class MyApp extends StatelessWidget {
                 return const SizedBox.shrink();
               }
               final card = _cards[index];
-              return AnimatedSwitcher(
-                duration: const Duration(milliseconds: 300),
-                transitionBuilder: (Widget child, Animation<double> animation) {
-                  final bool isIncoming =
-                      child.key == ValueKey<int>(visibleIndex);
-
-                  if (isIncoming) {
-                    return FadeTransition(
-                      opacity: animation,
-                      child: child,
-                    );
-                  } else {
-                    return child;
-                  }
-                },
-                child: Container(
-                  key: ValueKey<int>(visibleIndex),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(10),
-                    color: card['color'] as Color,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.1),
-                        blurRadius: 40,
-                      )
-                    ],
-                  ),
-                  width: 300,
-                  height: 200,
-                  alignment: Alignment.center,
-                  child: Text(
-                    card['text'] as String,
-                    style: const TextStyle(color: Colors.black45, fontSize: 12),
-                  ),
+              return Container(
+                key: ValueKey<int>(index),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  color: card['color'] as Color,
+                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 40)],
                 ),
+                width: 300,
+                height: 200,
+                alignment: Alignment.center,
+                child: Text(card['text'] as String, style: const TextStyle(color: Colors.black45, fontSize: 12)),
               );
             },
           ),
