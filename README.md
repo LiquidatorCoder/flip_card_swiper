@@ -41,7 +41,10 @@
   Easily flip between cards with a vertical drag gesture. Cards smoothly animate through the stack.
 
 - **Haptic Feedback:**  
-  Provide tactile feedback to users as they flip through cards, enhancing user experience.
+  Provide tactile feedback to users as they flip through cards, enhancing user experience. Can be turned off with `enableHaptics: false`.
+
+- **Accessibility:**  
+  Basic `Semantics` labels, optional hints, arrow-up when focused, and reduced motion via `MediaQuery.disableAnimations`.
 
 - **Dynamic Card Updates:**  
   The widget updates card order at mid-animation, allowing endless looping through your card collection.
@@ -59,7 +62,7 @@ Add the following line to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  flip_card_swiper: ^1.0.0
+  flip_card_swiper: ^2.1.1
 ```
 
 Then, run:
