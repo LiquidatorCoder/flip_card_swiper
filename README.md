@@ -62,7 +62,7 @@ Add the following line to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  flip_card_swiper: ^2.1.1
+  flip_card_swiper: ^2.1.3
 ```
 
 Then, run:

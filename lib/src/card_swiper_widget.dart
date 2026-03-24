@@ -108,6 +108,9 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>>
   AnimationController? _downDragController;
   Animation<double>? _downDragAnimation;
 
+  /// Single merge used by [AnimatedBuilder] (avoid reallocating each frame).
+  late final Listenable _frameListenable;
+
   double _startAnimationValue = 0.0;
   double _dragStartPosition = 0.0;
   double _dragOffset = 0.0;
@@ -246,10 +249,12 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>>
     _downDragAnimation = Tween<double>(
       begin: 0.0,
       end: 0.0,
-    ).animate(_downDragController!)
-      ..addListener(() {
-        _dragOffset = _downDragAnimation?.value ?? 0.0;
-      });
+    ).animate(_downDragController!);
+
+    _frameListenable = Listenable.merge(<Listenable>[
+      _controller!,
+      _downDragController!,
+    ]);
 
     _controller!.addListener(_onSwipeTick);
 
@@ -456,8 +461,13 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>>
       return;
     }
     if (_dragOffset != 0.0) {
+      // Capture pull distance for the tween, then clear so when [isAnimating] becomes
+      // false we do not fall back to a stale offset (regression after removing the
+      // down-drag listener that mirrored the tween into [_dragOffset]).
+      final double pull = _dragOffset;
+      _dragOffset = 0.0;
       _downDragAnimation = Tween<double>(
-        begin: _dragOffset,
+        begin: pull,
         end: 0.0,
       ).animate(CurvedAnimation(
         parent: _downDragController!,
@@ -521,17 +531,17 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>>
       if (_isCardSwitched) {
         for (int i = 0; i < cardCount; i++) {
           if (i == 0) {
-            stackChildren.add(buildTopCard(totalYOffset, rotation));
+            stackChildren.add(_buildTopCardLayer(totalYOffset, rotation));
           } else {
-            stackChildren.add(buildCard(cardCount - i));
+            stackChildren.add(_buildCardLayer(cardCount - i));
           }
         }
       } else {
         for (int i = cardCount - 1; i >= 0; i--) {
           if (i == 0) {
-            stackChildren.add(buildTopCard(totalYOffset, rotation));
+            stackChildren.add(_buildTopCardLayer(totalYOffset, rotation));
           } else {
-            stackChildren.add(buildCard(i));
+            stackChildren.add(_buildCardLayer(i));
           }
         }
       }
@@ -574,10 +584,7 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>>
             onVerticalDragUpdate: _onVerticalDragUpdate,
             onVerticalDragEnd: _onVerticalDragEnd,
             child: AnimatedBuilder(
-              animation: Listenable.merge(<Listenable>[
-                _controller!,
-                _downDragController!,
-              ]),
+              animation: _frameListenable,
               builder: (BuildContext context, Widget? child) {
                 return Stack(
                   alignment: Alignment.center,
@@ -591,8 +598,8 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>>
     );
   }
 
-  // Build the top card with main animation
-  Widget buildTopCard(double yOffset, double rotation) {
+  /// Top card layer (outer [AnimatedBuilder] already listens to the controller).
+  Widget _buildTopCardLayer(double yOffset, double rotation) {
     if (_topCardWidget == null) {
       return const SizedBox.shrink();
     }
@@ -601,63 +608,55 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>>
         ? (_poppedCardWidget ?? const SizedBox.shrink())
         : (_topCardWidget ?? const SizedBox.shrink());
 
-    return AnimatedBuilder(
-      animation: _controller!,
-      builder: (BuildContext context, Widget? child) {
-        final double controllerValue = _controller?.value ?? 0.0;
+    final double controllerValue = _controller?.value ?? 0.0;
 
-        // Piecewise scale matches original flip: do not add a separate Y offset here
-        // (that exposed the back card and snapped on controller.reset at t=1).
-        double scale;
-        if (_cardData.length == 2) {
-          if (controllerValue <= 0.5 && _cardData.length > 1) {
-            if (controllerValue >= 0.45) {
-              final double progress = (controllerValue - 0.45) / 0.05;
-              scale = 1.0 - 0.05 * progress;
-            } else {
-              scale = 1.0;
-            }
-          } else {
-            scale = 0.95;
-          }
+    double scale;
+    if (_cardData.length == 2) {
+      if (controllerValue <= 0.5 && _cardData.length > 1) {
+        if (controllerValue >= 0.45) {
+          final double progress = (controllerValue - 0.45) / 0.05;
+          scale = 1.0 - 0.05 * progress;
         } else {
-          if (controllerValue <= 0.5 && _cardData.length > 1) {
-            if (controllerValue >= 0.4) {
-              final double progress = (controllerValue - 0.4) / 0.1;
-              scale = 1.0 - 0.1 * progress;
-            } else {
-              scale = 1.0;
-            }
-          } else {
-            scale = 0.9;
-          }
+          scale = 1.0;
         }
+      } else {
+        scale = 0.95;
+      }
+    } else {
+      if (controllerValue <= 0.5 && _cardData.length > 1) {
+        if (controllerValue >= 0.4) {
+          final double progress = (controllerValue - 0.4) / 0.1;
+          scale = 1.0 - 0.1 * progress;
+        } else {
+          scale = 1.0;
+        }
+      } else {
+        scale = 0.9;
+      }
+    }
 
-        return Transform(
-          alignment: Alignment.center,
-          transform: Matrix4.identity()
-            ..translateByDouble(0.0, yOffset, 0, 1)
-            ..translateByDouble(
-              0.0,
-              _isCardSwitched
-                  ? (-widget.thirdCardOffsetStart) *
-                      (((_rotationAnimation?.value ?? 0) + 180) / 90)
-                  : 0,
-              0,
-              1,
-            )
-            ..setEntry(3, 2, 0.001)
-            ..rotateX(rotation * pi / 180)
-            ..scaleByDouble(scale, scale, 1.0, 1),
-          child: child,
-        );
-      },
+    return Transform(
+      alignment: Alignment.center,
+      transform: Matrix4.identity()
+        ..translateByDouble(0.0, yOffset, 0, 1)
+        ..translateByDouble(
+          0.0,
+          _isCardSwitched
+              ? (-widget.thirdCardOffsetStart) *
+                  (((_rotationAnimation?.value ?? 0) + 180) / 90)
+              : 0,
+          0,
+          1,
+        )
+        ..setEntry(3, 2, 0.001)
+        ..rotateX(rotation * pi / 180)
+        ..scaleByDouble(scale, scale, 1.0, 1),
       child: cardWidget,
     );
   }
 
-  // Build other cards with their animations
-  Widget buildCard(int index) {
+  /// Underlying card layers (same: one [AnimatedBuilder] for the stack).
+  Widget _buildCardLayer(int index) {
     if (_cardData.length <= 1 || index >= _cardData.length) {
       return const SizedBox.shrink();
     }
@@ -685,72 +684,66 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>>
       return const SizedBox.shrink();
     }
 
-    return AnimatedBuilder(
-      animation: _controller!,
-      builder: (BuildContext context, Widget? child) {
-        double initialOffset = 0.0;
-        double initialScale = 1.0;
-        double targetScale = 1.0;
+    final double controllerValue = _controller?.value ?? 0.0;
 
-        final double controllerValue = _controller?.value ?? 0.0;
+    double initialOffset = 0.0;
+    double initialScale = 1.0;
+    double targetScale = 1.0;
 
-        if (_cardData.length == 2) {
-          if (index == 1) {
-            initialOffset = widget.secondCardOffsetStart;
-            initialScale = widget.secondCardScaleStart;
-            targetScale = widget.secondCardScaleEnd;
-          }
-        } else {
-          if (index == 1) {
-            initialOffset = widget.secondCardOffsetStart;
-            initialScale = widget.secondCardScaleStart;
-            targetScale = widget.secondCardScaleEnd;
-          } else if (index == 2) {
-            initialOffset = widget.thirdCardOffsetStart;
-            initialScale = widget.thirdCardScaleStart;
-            targetScale = widget.thirdCardScaleEnd;
-          }
-        }
+    if (_cardData.length == 2) {
+      if (index == 1) {
+        initialOffset = widget.secondCardOffsetStart;
+        initialScale = widget.secondCardScaleStart;
+        targetScale = widget.secondCardScaleEnd;
+      }
+    } else {
+      if (index == 1) {
+        initialOffset = widget.secondCardOffsetStart;
+        initialScale = widget.secondCardScaleStart;
+        targetScale = widget.secondCardScaleEnd;
+      } else if (index == 2) {
+        initialOffset = widget.thirdCardOffsetStart;
+        initialScale = widget.thirdCardScaleStart;
+        targetScale = widget.thirdCardScaleEnd;
+      }
+    }
 
-        double yOffset = initialOffset;
-        double scale = initialScale;
+    double yOff = initialOffset;
+    double scale = initialScale;
 
-        if (controllerValue <= 0.5) {
-          double progress = controllerValue / 0.5;
+    if (controllerValue <= 0.5) {
+      double progress = controllerValue / 0.5;
 
-          if (_cardData.length == 2) {
-            yOffset = initialOffset - widget.secondCardOffsetStart * progress;
-          } else {
-            yOffset = initialOffset - widget.thirdCardOffsetStart * progress;
-          }
-          progress = Curves.easeOut.transform(progress);
+      if (_cardData.length == 2) {
+        yOff = initialOffset - widget.secondCardOffsetStart * progress;
+      } else {
+        yOff = initialOffset - widget.thirdCardOffsetStart * progress;
+      }
+      progress = Curves.easeOut.transform(progress);
 
-          scale = initialScale;
-        } else {
-          double progress = (controllerValue - 0.5) / 0.5;
+      scale = initialScale;
+    } else {
+      double progress = (controllerValue - 0.5) / 0.5;
 
-          if (_cardData.length == 2) {
-            yOffset = initialOffset -
-                widget.secondCardOffsetStart +
-                widget.secondCardOffsetEnd * progress;
-          } else {
-            yOffset = initialOffset -
-                widget.thirdCardOffsetStart +
-                widget.thirdCardOffsetEnd * progress;
-          }
-          progress = Curves.easeOut.transform(progress);
+      if (_cardData.length == 2) {
+        yOff = initialOffset -
+            widget.secondCardOffsetStart +
+            widget.secondCardOffsetEnd * progress;
+      } else {
+        yOff = initialOffset -
+            widget.thirdCardOffsetStart +
+            widget.thirdCardOffsetEnd * progress;
+      }
+      progress = Curves.easeOut.transform(progress);
 
-          scale = initialScale + (targetScale - initialScale) * progress;
-        }
+      scale = initialScale + (targetScale - initialScale) * progress;
+    }
 
-        return Transform(
-          alignment: Alignment.center,
-          transform: Matrix4.identity()
-            ..translateByDouble(0.0, yOffset, 0, 1)
-            ..scaleByDouble(scale, scale, 1.0, 1),
-          child: child,
-        );
-      },
+    return Transform(
+      alignment: Alignment.center,
+      transform: Matrix4.identity()
+        ..translateByDouble(0.0, yOff, 0, 1)
+        ..scaleByDouble(scale, scale, 1.0, 1),
       child: cardWidget,
     );
   }
