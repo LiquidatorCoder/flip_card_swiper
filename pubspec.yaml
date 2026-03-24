@@ -5,8 +5,8 @@ repository: https://github.com/LiquidatorCoder/flip_card_swiper
 topics: [animation, card, swipe, transform, flip]
 
 environment:
-  sdk: ">=3.1.2 <4.0.0"
-  flutter: ">=1.17.0"
+  sdk: ">=3.11.1 <4.0.0"
+  flutter: ">=3.41.4"
 
 dependencies:
   flutter:

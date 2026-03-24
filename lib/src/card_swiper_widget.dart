@@ -603,16 +603,18 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>>
         return Transform(
           alignment: Alignment.center,
           transform: Matrix4.identity()
-            ..translate(0.0, yOffset)
-            ..translate(
+            ..translateByDouble(0.0, yOffset, 0, 1)
+            ..translateByDouble(
                 0.0,
                 _isCardSwitched
                     ? (-widget.thirdCardOffsetStart) *
                         (((_rotationAnimation?.value ?? 0) + 180) / 90)
-                    : 0)
+                    : 0,
+                0,
+                1)
             ..setEntry(3, 2, 0.001)
             ..rotateX(rotation * pi / 180)
-            ..scale(scale, scale),
+            ..scaleByDouble(scale, scale, 1.0, 1),
           child: child,
         );
       },
@@ -724,7 +726,7 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>>
         return Transform(
           alignment: Alignment.center,
           transform: Matrix4.identity()
-            ..translate(
+            ..translateByDouble(
                 0.0,
                 widget.shouldStartCardCollectionAnimation &&
                         _cardCollectionyOffsetAnimation != null
@@ -735,8 +737,10 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>>
                             .drive(Tween(begin: yOffset, end: yOffset + 20))
                             .value ??
                         0
-                    : yOffset)
-            ..scale(scale, scale),
+                    : yOffset,
+                0,
+                1)
+            ..scaleByDouble(scale, scale, 1.0, 1),
           child: child,
         );
       },
