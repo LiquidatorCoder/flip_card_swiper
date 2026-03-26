@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/physics.dart';
 import 'package:flutter/services.dart';
 
 /// A customizable swipeable card widget with animations and gesture support.
@@ -245,21 +246,26 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
   }
 
   /// Springs the main flip [AnimationController] back to 0 (cancel flip).
-  void _springMainControllerToZero() {
+  ///
+  /// [dragVelocityPxPerSec] is the downward finger velocity at release (positive
+  /// = finger moving down); it is converted to controller units and fed into the
+  /// spring so a fast downward fling snaps back more aggressively.
+  void _springMainControllerToZero({double dragVelocityPxPerSec = 0.0}) {
     final AnimationController? c = _controller;
     if (c == null) return;
     final double v = c.value;
     if (v <= 0.0) return;
-    final int durationMs = ((c.duration?.inMilliseconds ?? 0) * v).round();
-    if (durationMs > 0) {
-      c.animateBack(
+    // Downward finger motion drives the controller toward 0 — negative velocity
+    // in controller-value units. Clamp to avoid an overly violent spring.
+    final double ctrlVelocity = -(dragVelocityPxPerSec / _safeMaxDrag).clamp(0.0, 8.0);
+    c.animateWith(
+      SpringSimulation(
+        SpringDescription.withDampingRatio(mass: 1.0, stiffness: 300.0, ratio: 0.82),
+        v,
         0.0,
-        duration: Duration(milliseconds: durationMs),
-        curve: Curves.easeOut,
-      );
-    } else {
-      c.value = 0.0;
-    }
+        ctrlVelocity,
+      ),
+    );
   }
 
   /// On pointer up: finish the flip toward 1.0 or spring back to 0 based on [controller] value.
@@ -299,7 +305,8 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
 
     // Cancel: release finger before committing - spring back.
     _resetGestureCompletionGates();
-    _springMainControllerToZero();
+    final double downwardV = math.max(0.0, details.velocity.pixelsPerSecond.dy);
+    _springMainControllerToZero(dragVelocityPxPerSec: downwardV);
   }
 
   /// Retries [animateTo] if completion was requested but the controller is idle mid-flight.
@@ -513,7 +520,7 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
       final double w2 = (1.0 - peak) * 100.0;
       _liftBoostAnimation = TweenSequence<double>([
         TweenSequenceItem<double>(
-          tween: Tween<double>(begin: 0.0, end: 1.0).chain(CurveTween(curve: Curves.easeOutCubic)),
+          tween: Tween<double>(begin: 0.0, end: 1.0).chain(CurveTween(curve: Curves.easeOutBack)),
           weight: w1,
         ),
         TweenSequenceItem<double>(
@@ -714,7 +721,7 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
       _downDragAnimation = Tween<double>(
         begin: pull,
         end: 0.0,
-      ).animate(CurvedAnimation(parent: _downDragController!, curve: Curves.easeOutCubic));
+      ).animate(CurvedAnimation(parent: _downDragController!, curve: Curves.easeOutBack));
       _downDragController?.forward(from: 0.0);
       _shouldPlayVibration = true;
       return;
