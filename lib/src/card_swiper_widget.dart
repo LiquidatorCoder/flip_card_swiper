@@ -68,6 +68,22 @@ class FlipCardSwiper<T> extends StatefulWidget {
   /// feel. Typical range: `0.001` (subtle) → `0.004` (dramatic). Default `0.002`.
   final double perspectiveDepth;
 
+  /// Thickness in logical pixels of the physical edge strip shown during the flip.
+  /// The strip is edge-on (invisible) when the card is flat and rotates into view
+  /// as the flip progresses, like the cardboard edge of a real playing card.
+  /// Set to `0` to disable. Default `6.0`.
+  final double cardEdgeThickness;
+
+  /// Returns the color of the physical edge strip for the card at [index] in
+  /// [cardData]. If null, all cards use white. Receives the same [index] as
+  /// [cardBuilder] so the edge color can match each card's design.
+  final Color Function(int index)? cardEdgeColorBuilder;
+
+  /// Border radius of the cards. When provided, the edge strip's left/right ends
+  /// are rounded to match the card's corners so the depth effect looks correct
+  /// on cards with rounded corners.
+  final BorderRadius? cardBorderRadius;
+
   /// Reserved for future top-card tuning. The flip animation uses fixed motion;
   /// these are not applied to the transform (defaults match pre-2.1 behavior).
   final double topCardOffsetStart;
@@ -123,6 +139,9 @@ class FlipCardSwiper<T> extends StatefulWidget {
     this.rotationStartFraction = 0.28,
     this.earlyLiftBoost = 0.1,
     this.perspectiveDepth = 0.002,
+    this.cardEdgeThickness = 6.0,
+    this.cardEdgeColorBuilder,
+    this.cardBorderRadius,
     super.key,
   }) : assert(maxDragDistance > 0),
        assert(thresholdValue >= 0 && thresholdValue <= 1),
@@ -130,7 +149,13 @@ class FlipCardSwiper<T> extends StatefulWidget {
        assert(rotationStartFraction >= 0.0 && rotationStartFraction <= 0.48),
        assert(earlyLiftBoost >= 0.0 && earlyLiftBoost <= 0.35),
        assert(completionPhaseScale > 0.0 && completionPhaseScale <= 3.0),
-       assert(perspectiveDepth > 0.0 && perspectiveDepth <= 0.01);
+       assert(perspectiveDepth > 0.0 && perspectiveDepth <= 0.01),
+       assert(cardEdgeThickness >= 0.0),
+       assert(
+         cardEdgeThickness <= 0 || cardBorderRadius == null,
+         'cardEdgeThickness and cardBorderRadius cannot be used together. '
+         'Use cardBorderRadius only when cardEdgeThickness is 0.',
+       );
 
   @override
   State<FlipCardSwiper<T>> createState() => _FlipCardSwiperState<T>();
@@ -801,6 +826,62 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
     );
   }
 
+  /// Wraps [card] with thin edge strips at the top and bottom that are folded
+  /// 90° relative to the card face. They are invisible when the card is flat
+  /// (edge-on to the viewer) and rotate into view during the X-axis flip,
+  /// giving the card the appearance of real physical thickness.
+  /// Back-face culling: only render the edge whose front face points toward the
+  /// viewer at [rotationDeg]. The top strip's normal z = -sin(rot) — visible when
+  /// sin(rot) < 0. The bottom strip's normal z = +sin(rot) — visible when sin(rot) > 0.
+  Widget _wrapWithDepthEdges(Widget card, double rotationDeg, int cardIndex) {
+    final double t = widget.cardEdgeThickness;
+    if (t <= 0) return card;
+    final Color c = widget.cardEdgeColorBuilder?.call(cardIndex) ?? Colors.white;
+
+    final double sinRot = math.sin(rotationDeg * math.pi / 180);
+    final bool showTopEdge = sinRot > 0;
+    final bool showBottomEdge = sinRot < 0;
+
+    if (!showTopEdge && !showBottomEdge) return card;
+
+    // Before 76° the strip folds toward the viewer (+z, rotateX(-π/2)).
+    // After 76° the card has passed vertical, so +z now points inward and
+    // creates the "tray" artifact — flip to rotateX(+π/2) so the strip stays
+    // flush with the physical near edge for the rest of the flip.
+    final bool pastMidpoint = rotationDeg < -76.0;
+    final double bottomInnerRot = pastMidpoint ? math.pi / 2 : -math.pi / 2;
+    final double topInnerRot = pastMidpoint ? -math.pi / 2 : math.pi / 2;
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: <Widget>[
+        card,
+        if (showTopEdge)
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: Transform(
+              alignment: Alignment.topCenter,
+              transform: Matrix4.identity()..rotateX(topInnerRot),
+              child: Container(height: t, color: c),
+            ),
+          ),
+        if (showBottomEdge)
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Transform(
+              alignment: Alignment.bottomCenter,
+              transform: Matrix4.identity()..rotateX(bottomInnerRot),
+              child: Container(height: t, color: c),
+            ),
+          ),
+      ],
+    );
+  }
+
   /// Top card layer (outer [AnimatedBuilder] already listens to the controller).
   Widget _buildTopCardLayer(double yOffset, double rotation) {
     if (_topCardWidget == null) {
@@ -857,7 +938,11 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
         ..setEntry(3, 2, widget.perspectiveDepth)
         ..rotateX(rotation * math.pi / 180)
         ..scaleByDouble(scale, scale, 1.0, 1),
-      child: cardWidget,
+      child: _wrapWithDepthEdges(
+        cardWidget,
+        rotation,
+        _isCardSwitched ? (_poppedCardIndex ?? 0) : (_topCardIndex ?? 0),
+      ),
     );
   }
 

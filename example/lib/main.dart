@@ -31,6 +31,7 @@ class MyApp extends StatelessWidget {
             animationDuration: const Duration(milliseconds: 600),
             downDragDuration: const Duration(milliseconds: 200),
             onCardChange: (index) {},
+            cardEdgeColorBuilder:(index) => darken(_cards[index]['color'] as Color, 0.1),
             cardBuilder: (context, index, visibleIndex) {
               if (index < 0 || index >= _cards.length) {
                 return const SizedBox.shrink();
@@ -39,7 +40,7 @@ class MyApp extends StatelessWidget {
               return Container(
                 key: ValueKey<int>(index),
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(0),
                   color: card['color'] as Color,
                   boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 40)],
                 ),
@@ -54,4 +55,13 @@ class MyApp extends StatelessWidget {
       ),
     );
   }
+}
+
+
+// method to darken a color by a percentage (0.0 to 1.0)
+Color darken(Color color, double amount) {
+  assert(amount >= 0 && amount <= 1);
+  final hsl = HSLColor.fromColor(color);
+  final hslDark = hsl.withLightness((hsl.lightness - amount).clamp(0.0, 1.0));
+  return hslDark.toColor();
 }
