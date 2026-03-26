@@ -62,6 +62,12 @@ class FlipCardSwiper<T> extends StatefulWidget {
   /// Extra hint, e.g. how to flip when not obvious from context.
   final String? semanticsHint;
 
+  /// Controls the strength of the 3-D perspective during the flip. Larger values
+  /// put the virtual camera closer to the screen, making near edges appear larger
+  /// and far edges smaller — giving the card genuine depth instead of a flat-paper
+  /// feel. Typical range: `0.001` (subtle) → `0.004` (dramatic). Default `0.002`.
+  final double perspectiveDepth;
+
   /// Reserved for future top-card tuning. The flip animation uses fixed motion;
   /// these are not applied to the transform (defaults match pre-2.1 behavior).
   final double topCardOffsetStart;
@@ -116,13 +122,15 @@ class FlipCardSwiper<T> extends StatefulWidget {
     this.thirdCardScaleEnd = 0.95,
     this.rotationStartFraction = 0.28,
     this.earlyLiftBoost = 0.1,
+    this.perspectiveDepth = 0.002,
     super.key,
   }) : assert(maxDragDistance > 0),
        assert(thresholdValue >= 0 && thresholdValue <= 1),
        assert(dragDownLimit <= 0),
        assert(rotationStartFraction >= 0.0 && rotationStartFraction <= 0.48),
        assert(earlyLiftBoost >= 0.0 && earlyLiftBoost <= 0.35),
-       assert(completionPhaseScale > 0.0 && completionPhaseScale <= 3.0);
+       assert(completionPhaseScale > 0.0 && completionPhaseScale <= 3.0),
+       assert(perspectiveDepth > 0.0 && perspectiveDepth <= 0.01);
 
   @override
   State<FlipCardSwiper<T>> createState() => _FlipCardSwiperState<T>();
@@ -846,7 +854,7 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
       transform: Matrix4.identity()
         ..translateByDouble(0.0, yOffset, 0, 1)
         ..translateByDouble(0.0, midFlipYOffset, 0, 1)
-        ..setEntry(3, 2, 0.001)
+        ..setEntry(3, 2, widget.perspectiveDepth)
         ..rotateX(rotation * math.pi / 180)
         ..scaleByDouble(scale, scale, 1.0, 1),
       child: cardWidget,
