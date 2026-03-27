@@ -1,3 +1,11 @@
+## 2.1.0
+
+- **3D edge support:** Cards now show a 3D edge effect during the flip. New `show3DEdge` parameter (and related options) let you tune the look.
+- **Deeper perspective:** Increased the default depth perspective transform for a more pronounced 3D feel.
+- **Curve fixes:** Refined animation curves for smoother, more natural flip transitions.
+- **Removed card collection animation:** Simplified the API by dropping the card-collection entrance animation.
+- **Animation rewrite and hardening:** Internally rewrote and optimised the animation logic; improved reliability when flips are interrupted or rapidly triggered.
+
 ## 2.0.0
 
 Animation, gestures, and reliability:
