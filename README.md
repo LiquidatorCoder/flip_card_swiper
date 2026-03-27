@@ -30,9 +30,9 @@
 
 ---
 
-| ![Colored Card Demo](https://raw.githubusercontent.com/LiquidatorCoder/flip_card_swiper/main/screenshots/colored.gif) | ![White Card Demo](https://raw.githubusercontent.com/LiquidatorCoder/flip_card_swiper/main/screenshots/white.gif) |
-| --------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| **Flip Animation with Colored Cards**                                                                                 | **Flip Animation with White Cards**                                                                               |
+| ![3D Edge Demo](https://raw.githubusercontent.com/LiquidatorCoder/flip_card_swiper/main/screenshots/3d.gif) | ![Credit Card Demo](https://raw.githubusercontent.com/LiquidatorCoder/flip_card_swiper/main/screenshots/credit.gif) | ![Minimal Demo](https://raw.githubusercontent.com/LiquidatorCoder/flip_card_swiper/main/screenshots/minimal.gif) |
+| ------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| **3D Edge Flip Effect**                                                                                      | **Credit Card Style**                                                                                                 | **Minimal Style**                                                                                                 |
 
 ---
 
