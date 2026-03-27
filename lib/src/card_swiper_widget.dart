@@ -92,10 +92,16 @@ class FlipCardSwiper<T> extends StatefulWidget {
   final double topCardScaleStart;
   final double topCardScaleEnd;
 
-  // Offset and scale parameters for the second card.
+  /// Vertical offset of the second card at rest (before a flip begins).
   final double secondCardOffsetStart;
+
+  /// Vertical offset the second card animates toward as it becomes the top card.
   final double secondCardOffsetEnd;
+
+  /// Scale of the second card at rest (before a flip begins).
   final double secondCardScaleStart;
+
+  /// Scale the second card animates toward as it becomes the top card.
   final double secondCardScaleEnd;
 
   // Offset and scale parameters for the third card.
