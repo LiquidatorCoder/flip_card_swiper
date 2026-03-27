@@ -18,7 +18,11 @@ dev_dependencies:
   flutter_lints: ^4.0.0
 
 screenshots:
-  - description: Flip cards swiper in action.
-    path: screenshots/colored.gif
+  - description: 3D edge flip effect.
+    path: screenshots/3d.gif
+  - description: Credit card style flip.
+    path: screenshots/credit.gif
+  - description: Minimal style flip.
+    path: screenshots/minimal.gif
 
 flutter:
