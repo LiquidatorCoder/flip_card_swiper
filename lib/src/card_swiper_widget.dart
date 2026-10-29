@@ -274,6 +274,10 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
     if (c == null) return;
     final double v = c.value;
     if (v <= 0.0) return;
+    if (MediaQuery.disableAnimationsOf(context)) {
+      c.value = 0.0; // Reduce Motion: no spring.
+      return;
+    }
     // Downward finger motion drives the controller toward 0 — negative velocity
     // in controller-value units. Clamp to avoid an overly violent spring.
     final double ctrlVelocity = -(dragVelocityPxPerSec / _safeMaxDrag).clamp(0.0, 8.0);

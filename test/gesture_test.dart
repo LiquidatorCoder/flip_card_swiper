@@ -152,4 +152,29 @@ void main() {
 
     expect(h.changes, isEmpty);
   });
+
+  testWidgets('with reduced motion a cancelled drag snaps back immediately', (tester) async {
+    final List<int> changes = <int>[];
+    await tester.pumpWidget(
+      MediaQuery(
+        data: const MediaQueryData(disableAnimations: true),
+        child: MaterialApp(
+          home: Center(
+            child: FlipCardSwiper<int>(
+              cardData: const <int>[0, 1, 2],
+              onCardChange: changes.add,
+              cardBuilder: (context, index, visibleIndex) =>
+                  SizedBox(width: 300, height: 200, child: Text('card $index')),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await _drag(tester, const Offset(0, -45), const Duration(milliseconds: 500));
+    final int frames = await tester.pumpAndSettle();
+
+    expect(changes, isEmpty);
+    expect(frames, lessThanOrEqualTo(2));
+  });
 }
