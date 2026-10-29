@@ -11,6 +11,7 @@
 - **Fix:** Cards keep their `State` through a flip. Every flip used to remount the visible cards, so images reloaded and stateful cards reset.
 - **Fix:** Fired haptic timers are released instead of accumulating for the widget's lifetime.
 - **Performance:** Each card paints into its own layer, so only its transform changes per frame. UI-thread frame time during flips drops ~30–40% for cards with shadows and gradients (iOS simulator).
+- **Look:** The end of a flip no longer pops. The flipped card used to land on the third slot and then swap for the next card in the deck on the last frame. Now the next card slides out from behind the deck and the flipped card tucks in underneath it.
 
 ## 2.1.0
 

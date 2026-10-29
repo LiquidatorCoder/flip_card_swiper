@@ -810,6 +810,10 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
         for (int i = 0; i < cardCount; i++) {
           if (i == 0) {
             stackChildren.add(_buildTopCardLayer(totalYOffset, rotation));
+            // The card that becomes third waits at its resting slot just above the
+            // tucking card, which slides in underneath and ends fully hidden - so the
+            // reset at the end of the flip changes nothing on screen.
+            if (_cardData.length > 3) stackChildren.add(_buildIncomingCardLayer());
           } else {
             stackChildren.add(_buildCardLayer(cardCount - i));
           }
@@ -1001,6 +1005,23 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
         ..rotateX(rotation * math.pi / 180)
         ..scaleByDouble(scale, scale, 1.0, 1),
       child: ExcludeSemantics(excluding: _isCardSwitched, child: _wrapWithDepthEdges(cardWidget, rotation, dataIndex)),
+    );
+  }
+
+  /// The card that becomes third once the flip completes. At the swap it sits exactly
+  /// behind the card ahead of it, then slides out to the third slot's rest pose over
+  /// the second half, so it emerges from the deck instead of appearing at once.
+  Widget _buildIncomingCardLayer() {
+    final int? dataIndex = _indexAt(2);
+    if (dataIndex == null) return const SizedBox.shrink();
+    final double progress = (((_controller?.value ?? 0.0) - 0.5) / 0.5).clamp(0.0, 1.0);
+    return Transform(
+      key: ValueKey<int>(dataIndex),
+      alignment: Alignment.center,
+      transform: Matrix4.identity()
+        ..translateByDouble(0.0, widget.thirdCardOffsetStart * progress, 0, 1)
+        ..scaleByDouble(widget.thirdCardScaleStart, widget.thirdCardScaleStart, 1.0, 1),
+      child: ExcludeSemantics(child: _wrapWithDepthEdges(_cardFor(dataIndex), 0.0, dataIndex)),
     );
   }
 
