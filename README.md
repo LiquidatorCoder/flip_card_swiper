@@ -69,7 +69,7 @@ Add this under `dependencies` in `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  flip_card_swiper: ^2.1.0
+  flip_card_swiper: ^2.2.0
 ```
 
 Fetch packages:
