@@ -208,17 +208,18 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
   /// and nothing calls [_onSwipeTick] again - this one-shot timer retries once.
   Timer? _completionWatchdogTimer;
 
-  Widget? _topCardWidget;
-  int? _topCardIndex;
+  /// Card widgets for the current [build], keyed by index into [FlipCardSwiper.cardData].
+  ///
+  /// Built in [build] (so [FlipCardSwiper.cardBuilder] can read inherited widgets and
+  /// picks up parent rebuilds) and reused unchanged by every animation frame.
+  final Map<int, Widget> _builtCards = <int, Widget>{};
 
-  Widget? _secondCardWidget;
-  int? _secondCardIndex;
-
-  Widget? _thirdCardWidget;
-  int? _thirdCardIndex;
-
-  Widget? _poppedCardWidget;
+  /// Data index of the card that is flipping to the back (valid while [_isCardSwitched]).
   int? _poppedCardIndex;
+
+  int? _indexAt(int position) => position < _dataIndices.length ? _dataIndices[position] : null;
+
+  int? get _topCardIndex => _indexAt(0);
 
   double get _threshold => widget.thresholdValue.clamp(0.0, 1.0);
 
@@ -448,13 +449,14 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
   }
 
   void _scheduleHaptic(VoidCallback action, Duration delay) {
-    _hapticTimers.add(
-      Timer(delay, () {
-        if (!mounted) return;
-        if (!widget.enableHaptics) return;
-        action();
-      }),
-    );
+    late final Timer timer;
+    timer = Timer(delay, () {
+      _hapticTimers.remove(timer);
+      if (!mounted) return;
+      if (!widget.enableHaptics) return;
+      action();
+    });
+    _hapticTimers.add(timer);
   }
 
   /// Triggers haptic feedback when a card is successfully switched.
@@ -507,8 +509,6 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
 
     _controller!.addListener(_onSwipeTick);
     _controller!.addStatusListener(_onFlipAnimationStatus);
-
-    _updateCardWidgets();
   }
 
   /// One clean completion signal (avoids relying on [value] == 1.0 every tick).
@@ -555,10 +555,6 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
     if (_cardData.length > 1) {
       if (!_isCardSwitched && (_controller?.value ?? 0.0) >= 0.5) {
         _poppedCardIndex = _dataIndices[0];
-        // Reuse the same widget instance as the pre-swap top card so Element/state
-        // and keys stay stable across the z-order swap (rebuilding via cardBuilder
-        // with a new visibleIndex often changes ValueKey(visibleIndex) and reads as a snap).
-        _poppedCardWidget = _topCardWidget;
         final T firstCard = _cardData.removeAt(0);
         _dataIndices.removeAt(0);
         _cardData.add(firstCard);
@@ -568,9 +564,8 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
 
         _isCardSwitched = true;
 
-        _updateCardWidgets();
-        // Rebuild once per flip so the semantics value (outside the per-frame
-        // AnimatedBuilder) reflects the new top card.
+        // Rebuild once per flip: the visible cards changed, and so does the
+        // semantics value (both live outside the per-frame AnimatedBuilder).
         setState(() {});
 
         widget.onCardChange?.call(_dataIndices[0]);
@@ -580,32 +575,20 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
     }
   }
 
-  /// Updates the widgets for the top three visible cards.
-  void _updateCardWidgets() {
-    if (_cardData.isNotEmpty) {
-      _topCardIndex = _dataIndices[0];
-      _topCardWidget = widget.cardBuilder(context, _topCardIndex ?? 0, 0);
-    } else {
-      _topCardIndex = null;
-      _topCardWidget = null;
+  /// Builds the cards visible in the current stack into [_builtCards].
+  void _buildVisibleCards(BuildContext context) {
+    _builtCards.clear();
+    for (int position = 0; position < math.min(_dataIndices.length, 3); position++) {
+      final int index = _dataIndices[position];
+      _builtCards[index] = widget.cardBuilder(context, index, position);
     }
-
-    if (_cardData.length > 1) {
-      _secondCardIndex = _dataIndices[1];
-      _secondCardWidget = widget.cardBuilder(context, _secondCardIndex ?? 0, 1);
-    } else {
-      _secondCardIndex = null;
-      _secondCardWidget = null;
-    }
-
-    if (_cardData.length > 2) {
-      _thirdCardIndex = _dataIndices[2];
-      _thirdCardWidget = widget.cardBuilder(context, _thirdCardIndex ?? 0, 2);
-    } else {
-      _thirdCardIndex = null;
-      _thirdCardWidget = null;
+    final int? popped = _poppedCardIndex;
+    if (_isCardSwitched && popped != null && !_builtCards.containsKey(popped)) {
+      _builtCards[popped] = widget.cardBuilder(context, popped, 0);
     }
   }
+
+  Widget _cardFor(int? index) => (index == null ? null : _builtCards[index]) ?? const SizedBox.shrink();
 
   @override
   void didChangeDependencies() {
@@ -633,8 +616,6 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
 
       _controller?.reset();
       _downDragController?.reset();
-
-      _updateCardWidgets();
     }
 
     if (widget.animationDuration != oldWidget.animationDuration ||
@@ -817,7 +798,7 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
     final List<Widget> stackChildren = <Widget>[];
 
     if (_cardData.length == 1) {
-      stackChildren.add(_topCardWidget ?? const SizedBox.shrink());
+      stackChildren.add(_cardFor(_topCardIndex));
     } else {
       final int cardCount = math.min(_cardData.length, 3);
 
@@ -852,6 +833,7 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
       );
     }
 
+    _buildVisibleCards(context);
     final String defaultHint = widget.semanticsHint ?? 'Swipe up to move to the next card.';
     final int total = widget.cardData.length;
     final bool canFlip = _cardData.length > 1;
@@ -916,7 +898,8 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
     final bool showTopEdge = sinRot > 0;
     final bool showBottomEdge = sinRot < 0;
 
-    if (!showTopEdge && !showBottomEdge) return card;
+    // Keep the same Stack (card first) whether or not a strip is showing, so the
+    // card's element is never re-parented when the strips appear mid-flip.
 
     // Before 76° the strip folds toward the viewer (+z, rotateX(-π/2)).
     // After 76° the card has passed vertical, so +z now points inward and
@@ -958,13 +941,11 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
 
   /// Top card layer (outer [AnimatedBuilder] already listens to the controller).
   Widget _buildTopCardLayer(double yOffset, double rotation) {
-    if (_topCardWidget == null) {
+    final int? dataIndex = _isCardSwitched && _cardData.length > 1 ? _poppedCardIndex : _topCardIndex;
+    if (dataIndex == null) {
       return const SizedBox.shrink();
     }
-
-    final Widget cardWidget = _isCardSwitched && _cardData.length > 1
-        ? (_poppedCardWidget ?? const SizedBox.shrink())
-        : (_topCardWidget ?? const SizedBox.shrink());
+    final Widget cardWidget = _cardFor(dataIndex);
 
     final double controllerValue = _controller?.value ?? 0.0;
 
@@ -1004,7 +985,10 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
     final double midFlipYOffset =
         flipAdjustBlend * (-widget.thirdCardOffsetStart) * (((_rotationAnimation?.value ?? 0) + 180) / 90);
 
+    // Keyed by data index so the Stack moves this card's element when the z-order
+    // changes at the midpoint, instead of rebuilding every card from scratch.
     return Transform(
+      key: ValueKey<int>(dataIndex),
       alignment: Alignment.center,
       transform: Matrix4.identity()
         ..translateByDouble(0.0, yOffset, 0, 1)
@@ -1012,14 +996,7 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
         ..setEntry(3, 2, widget.perspectiveDepth)
         ..rotateX(rotation * math.pi / 180)
         ..scaleByDouble(scale, scale, 1.0, 1),
-      child: ExcludeSemantics(
-        excluding: _isCardSwitched,
-        child: _wrapWithDepthEdges(
-          cardWidget,
-          rotation,
-          _isCardSwitched ? (_poppedCardIndex ?? 0) : (_topCardIndex ?? 0),
-        ),
-      ),
+      child: ExcludeSemantics(excluding: _isCardSwitched, child: _wrapWithDepthEdges(cardWidget, rotation, dataIndex)),
     );
   }
 
@@ -1029,28 +1006,15 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
       return const SizedBox.shrink();
     }
 
-    Widget? cardWidget;
-    if (_isCardSwitched) {
-      if (index == 1) {
-        cardWidget = _topCardWidget;
-      } else if (index == 2) {
-        cardWidget = _secondCardWidget;
-      } else {
-        return const SizedBox.shrink();
-      }
-    } else {
-      if (index == 1) {
-        cardWidget = _secondCardWidget;
-      } else if (index == 2) {
-        cardWidget = _thirdCardWidget;
-      } else {
-        return const SizedBox.shrink();
-      }
-    }
-
-    if (cardWidget == null) {
+    if (index != 1 && index != 2) {
       return const SizedBox.shrink();
     }
+    // After the swap the deck has already rotated, so layer 1 shows the new top card.
+    final int? dataIndex = _indexAt(_isCardSwitched ? index - 1 : index);
+    if (dataIndex == null) {
+      return const SizedBox.shrink();
+    }
+    final Widget cardWidget = _cardFor(dataIndex);
 
     final double controllerValue = _controller?.value ?? 0.0;
 
@@ -1104,12 +1068,17 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
     }
 
     return Transform(
+      key: ValueKey<int>(dataIndex),
       alignment: Alignment.center,
       transform: Matrix4.identity()
         ..translateByDouble(0.0, yOff, 0, 1)
         ..scaleByDouble(scale, scale, 1.0, 1),
       // Cards underneath are hidden from screen readers; only the top card is read.
-      child: ExcludeSemantics(excluding: !(_isCardSwitched && index == 1), child: cardWidget),
+      // Same wrapper as the top layer, so a card keeps its element when it moves up.
+      child: ExcludeSemantics(
+        excluding: !(_isCardSwitched && index == 1),
+        child: _wrapWithDepthEdges(cardWidget, 0.0, dataIndex),
+      ),
     );
   }
 }
