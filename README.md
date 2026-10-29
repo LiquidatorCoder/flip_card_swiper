@@ -33,7 +33,7 @@
 
 ---
 
-| ![3D Edge Demo](https://raw.githubusercontent.com/LiquidatorCoder/flip_card_swiper/main/screenshots/3d.gif) | ![Credit Card Demo](https://raw.githubusercontent.com/LiquidatorCoder/flip_card_swiper/main/screenshots/credit.gif) | ![Minimal Demo](https://raw.githubusercontent.com/LiquidatorCoder/flip_card_swiper/main/screenshots/minimal.gif) |
+| ![3D Edge Demo](https://raw.githubusercontent.com/LiquidatorCoder/flip_card_swiper/main/screenshots/3d.webp) | ![Credit Card Demo](https://raw.githubusercontent.com/LiquidatorCoder/flip_card_swiper/main/screenshots/credit.webp) | ![Minimal Demo](https://raw.githubusercontent.com/LiquidatorCoder/flip_card_swiper/main/screenshots/minimal.webp) |
 | ------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
 | **3D Edge Flip Effect**                                                                                      | **Credit Card Style**                                                                                                 | **Minimal Style**                                                                                                 |
 
