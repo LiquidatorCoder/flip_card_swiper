@@ -580,13 +580,17 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
     _builtCards.clear();
     for (int position = 0; position < math.min(_dataIndices.length, 3); position++) {
       final int index = _dataIndices[position];
-      _builtCards[index] = widget.cardBuilder(context, index, position);
+      _builtCards[index] = _isolate(widget.cardBuilder(context, index, position));
     }
     final int? popped = _poppedCardIndex;
     if (_isCardSwitched && popped != null && !_builtCards.containsKey(popped)) {
-      _builtCards[popped] = widget.cardBuilder(context, popped, 0);
+      _builtCards[popped] = _isolate(widget.cardBuilder(context, popped, 0));
     }
   }
+
+  /// Gives each card its own layer: only its transform changes per frame, so the
+  /// card's content (shadows, gradients, text) is recorded once instead of every frame.
+  Widget _isolate(Widget card) => RepaintBoundary(child: card);
 
   Widget _cardFor(int? index) => (index == null ? null : _builtCards[index]) ?? const SizedBox.shrink();
 
