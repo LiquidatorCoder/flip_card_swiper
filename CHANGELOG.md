@@ -4,7 +4,7 @@
 - **Fix:** A swipe started while the previous flip is finishing is no longer dropped; it finishes that flip and starts the next.
 - **Fix:** A short, fast upward flick now flips the card even before `thresholdValue` is reached.
 - **Fix:** Cancelled flips spring back without overshoot and stop ticking once settled (~300 ms instead of ~600 ms).
-- **Fix:** The arrow-up shortcut now works: tapping or dragging the stack gives it keyboard focus.
+- **Fix:** The arrow-up shortcut now works: touching the stack gives it keyboard focus, even when a card handles taps itself.
 - **Accessibility:** VoiceOver / TalkBack can flip the stack (increase or scroll-up action), and announce "N of M"; cards hidden underneath are no longer read out.
 - **Fix:** `cardBuilder` can now use inherited widgets such as `Theme.of(context)`; previously it threw because cards were built in `initState`.
 - **Fix:** Cards rebuild when the parent rebuilds with a new `cardBuilder` (they were cached until `cardData` changed).

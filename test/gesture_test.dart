@@ -105,7 +105,7 @@ void main() {
 
     await _drag(tester, const Offset(0, -45), const Duration(milliseconds: 500));
     await tester.pump(const Duration(milliseconds: 16)); // spring-back in flight
-    await _drag(tester, const Offset(0, -35), const Duration(milliseconds: 400));
+    await _drag(tester, const Offset(0, -15), const Duration(milliseconds: 400));
     await tester.pumpAndSettle();
 
     expect(h.changes, isEmpty);
@@ -176,5 +176,32 @@ void main() {
 
     expect(changes, isEmpty);
     expect(frames, lessThanOrEqualTo(2));
+  });
+
+  testWidgets('arrow up works after tapping a card that handles taps itself', (tester) async {
+    final List<int> changes = <int>[];
+    int taps = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Center(
+          child: FlipCardSwiper<int>(
+            cardData: const <int>[0, 1, 2],
+            onCardChange: changes.add,
+            cardBuilder: (context, index, visibleIndex) => GestureDetector(
+              onTap: () => taps++,
+              child: SizedBox(width: 300, height: 200, child: Text('card $index')),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('card 0'));
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    await tester.pumpAndSettle();
+
+    expect(taps, 1, reason: "the card's own tap still fires");
+    expect(changes, <int>[1]);
   });
 }

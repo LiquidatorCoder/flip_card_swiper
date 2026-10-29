@@ -877,21 +877,25 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
           }
           return KeyEventResult.ignored;
         },
-        child: RepaintBoundary(
-          child: GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            // Semantic drags from this detector never move, so they could not flip;
-            // the Semantics above provides working increase / scroll-up actions.
-            excludeFromSemantics: true,
-            onTapDown: (_) => _focusNode.requestFocus(),
-            onVerticalDragStart: _onVerticalDragStart,
-            onVerticalDragUpdate: _onVerticalDragUpdate,
-            onVerticalDragEnd: _onVerticalDragEnd,
-            child: AnimatedBuilder(
-              animation: _frameListenable,
-              builder: (BuildContext context, Widget? child) {
-                return Stack(alignment: Alignment.center, children: _buildStackedCards());
-              },
+        // Take focus on any pointer down. A Listener is outside the gesture arena, so this
+        // works even when a card's own tap handler wins the tap.
+        child: Listener(
+          onPointerDown: (_) => _focusNode.requestFocus(),
+          child: RepaintBoundary(
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              // Semantic drags from this detector never move, so they could not flip;
+              // the Semantics above provides working increase / scroll-up actions.
+              excludeFromSemantics: true,
+              onVerticalDragStart: _onVerticalDragStart,
+              onVerticalDragUpdate: _onVerticalDragUpdate,
+              onVerticalDragEnd: _onVerticalDragEnd,
+              child: AnimatedBuilder(
+                animation: _frameListenable,
+                builder: (BuildContext context, Widget? child) {
+                  return Stack(alignment: Alignment.center, children: _buildStackedCards());
+                },
+              ),
             ),
           ),
         ),
