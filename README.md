@@ -11,6 +11,9 @@
   <a href="https://pub.dartlang.org/packages/flip_card_swiper">
     <img src="https://img.shields.io/pub/v/flip_card_swiper.svg" alt="Pub Package" />
   </a>
+  <a href="https://github.com/LiquidatorCoder/flip_card_swiper/actions/workflows/ci.yml">
+    <img src="https://github.com/LiquidatorCoder/flip_card_swiper/actions/workflows/ci.yml/badge.svg" alt="CI" />
+  </a>
   <a href="https://opensource.org/licenses/MIT">
     <img src="https://img.shields.io/github/license/LiquidatorCoder/flip_card_swiper?color=red" alt="License: MIT" />
   </a>
@@ -42,16 +45,16 @@
   Drag up to flip the top card. Motion eases in and out; the second half of the flip stays smooth instead of feeling mushy at the end. After you pass halfway, how long the finish takes depends on how fast you flicked and on **`completionPhaseScale`**. You can also change **`animationDuration`**, **`thresholdValue`** (progress along the drag-past this, releasing can finish the flip even before the halfway point), **`maxDragDistance`**, and optional **`earlyLiftBoost`** / **`rotationStartFraction`** for extra lift at the start of the drag.
 
 - **Gestures that always resolve:**  
-  When you lift your finger, the flip either completes or springs back-you should not get stuck between the two after a partial swipe.
+  When you lift your finger, the flip either completes or springs back-you should not get stuck between the two after a partial swipe. One drag flips at most one card, a quick flick flips even before **`thresholdValue`**, and a swipe started while the previous flip is finishing is never dropped. Pulling down rubber-bands toward **`dragDownLimit`**.
 
 - **Haptics:**  
   Light feedback while cards move. Turn it off with **`enableHaptics: false`**.
 
-- **Accessibility:**  
-  Optional labels and hints for assistive technologies, plus support for the platform’s **reduce motion** setting (`MediaQuery.disableAnimations`).
+- **Accessibility and keyboard:**  
+  Screen readers announce the position ("2 of 5") and can flip with the increase / scroll-up action; cards hidden underneath are not read. Touch the stack and press **↑** to flip from a keyboard. Optional **`semanticsLabel`** / **`semanticsHint`**, and the platform’s **reduce motion** setting (`MediaQuery.disableAnimations`) is respected.
 
 - **Reordering:**  
-  Cards swap order halfway through the flip so you can loop through a list without a hard cut.
+  Cards swap order halfway through the flip so you can loop through a list without a hard cut. The next card slides out from behind the deck as the flipped card tucks in, and cards keep their `State` while they are visible-so stateful, themed or image cards just work.
 
 - **Layout:**  
   Separate scale and offset for the top three cards so you can tune the stack look.
@@ -66,7 +69,7 @@ Add this under `dependencies` in `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  flip_card_swiper: ^2.0.0
+  flip_card_swiper: ^2.1.0
 ```
 
 Fetch packages:
@@ -132,6 +135,17 @@ class MyApp extends StatelessWidget {
 
 
 ```
+
+## Example and tests
+
+The [example](example/lib/main.dart) app has six styles (basic, credit cards, tap-to-reveal flash cards, travel, profiles, minimal news) with a card counter driven by `onCardChange`.
+
+```bash
+flutter test                                   # package tests
+cd example && flutter test integration_test -d <simulator-id>   # e2e on a device or simulator
+```
+
+The e2e suite drives every example (slow drags, flings, flicks, cancels, pull-down, rapid swipes, wrap-around, keyboard, screen reader) and prints `METRIC` lines with latency and frame timings.
 
 ## Changelog
 
