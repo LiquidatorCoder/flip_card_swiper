@@ -34,14 +34,14 @@ class ExamplesHome extends StatelessWidget {
     ),
     _ExampleEntry(
       title: 'Credit Cards',
-      subtitle: 'Rounded corners · gradient · edge colour',
+      subtitle: 'Rounded corners · gradient · no edge',
       icon: Icons.credit_card,
       color: Color(0xFF1A237E),
       page: CreditCardsExample(),
     ),
     _ExampleEntry(
       title: 'Flash Cards',
-      subtitle: 'Fast flip · high perspective · quiz feel',
+      subtitle: 'Tap to reveal · fast flip · high perspective',
       icon: Icons.school,
       color: Color(0xFF1B5E20),
       page: FlashCardsExample(),
@@ -153,6 +153,47 @@ class _ExampleTile extends StatelessWidget {
 // Helper
 // ─────────────────────────────────────────────────────────────
 
+/// Centers a [FlipCardSwiper] and shows a "current / total" counter driven by
+/// [FlipCardSwiper.onCardChange].
+class SwiperDemoBody extends StatefulWidget {
+  const SwiperDemoBody({super.key, required this.itemCount, required this.builder, this.dark = false});
+
+  final int itemCount;
+  final bool dark;
+  final Widget Function(ValueChanged<int> onCardChange) builder;
+
+  @override
+  State<SwiperDemoBody> createState() => _SwiperDemoBodyState();
+}
+
+class _SwiperDemoBodyState extends State<SwiperDemoBody> {
+  int _index = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color fg = widget.dark ? Colors.white70 : Colors.black54;
+    return Column(
+      children: [
+        Expanded(child: Center(child: widget.builder((i) => setState(() => _index = i)))),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 48),
+          child: Text(
+            '${_index + 1} / ${widget.itemCount}',
+            key: const Key('card-counter'),
+            style: TextStyle(
+              color: fg,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 1,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 // ─────────────────────────────────────────────────────────────
 // 0. Basic (original)
 // ─────────────────────────────────────────────────────────────
@@ -182,12 +223,13 @@ class BasicExample extends StatelessWidget {
         backgroundColor: const Color(0xFF546E7A),
         foregroundColor: Colors.white,
       ),
-      body: Center(
-        child: FlipCardSwiper(
+      body: SwiperDemoBody(
+        itemCount: _cards.length,
+        builder: (onCardChange) => FlipCardSwiper(
+          onCardChange: onCardChange,
           cardData: _cards,
           animationDuration: const Duration(milliseconds: 600),
           downDragDuration: const Duration(milliseconds: 200),
-          onCardChange: (index) {},
           cardEdgeColorBuilder: (index) => darken(_cards[index]['color'] as Color, 0.1),
           cardBuilder: (context, index, visibleIndex) {
             if (index < 0 || index >= _cards.length) {
@@ -235,7 +277,7 @@ class CreditCardsExample extends StatelessWidget {
     _CreditCard(
       name: 'Abhay Maurya',
       number: '5412 •••• •••• 3340',
-      expiry: '03 / 26',
+      expiry: '03 / 29',
       gradient: [Color(0xFF880E4F), Color(0xFFAD1457)],
       network: 'MC',
     ),
@@ -249,7 +291,7 @@ class CreditCardsExample extends StatelessWidget {
     _CreditCard(
       name: 'Abhay Maurya',
       number: '6011 •••• •••• 1117',
-      expiry: '06 / 25',
+      expiry: '06 / 30',
       gradient: [Color(0xFFE65100), Color(0xFFF57C00)],
       network: 'DISC',
     ),
@@ -264,8 +306,11 @@ class CreditCardsExample extends StatelessWidget {
         backgroundColor: const Color(0xFF0D0D0D),
         foregroundColor: Colors.white,
       ),
-      body: Center(
-        child: FlipCardSwiper(
+      body: SwiperDemoBody(
+        itemCount: _cards.length,
+        dark: true,
+        builder: (onCardChange) => FlipCardSwiper(
+          onCardChange: onCardChange,
           cardData: _cards,
           animationDuration: const Duration(milliseconds: 700),
           completionPhaseScale: 1.2,
@@ -438,76 +483,108 @@ class FlashCardsExample extends StatelessWidget {
         backgroundColor: const Color(0xFF1B5E20),
         foregroundColor: Colors.white,
       ),
-      body: Center(
-        child: FlipCardSwiper(
+      body: SwiperDemoBody(
+        itemCount: _cards.length,
+        builder: (onCardChange) => FlipCardSwiper(
+          onCardChange: onCardChange,
           cardData: _cards,
           animationDuration: const Duration(milliseconds: 450),
           downDragDuration: const Duration(milliseconds: 150),
           cardEdgeThickness: 0,
-          cardEdgeColorBuilder: (i) => darken(_cards[i].color, 0.2),
+          perspectiveDepth: 0.003,
           cardBuilder: (context, index, visibleIndex) {
             if (index < 0 || index >= _cards.length) {
               return const SizedBox.shrink();
             }
-            final card = _cards[index];
-            return Container(
-              key: ValueKey(index),
-              width: 300,
-              height: 200,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 20, offset: const Offset(0, 8)),
-                ],
-              ),
-              child: Column(
-                children: [
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: card.color,
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                    ),
-                    child: Text(
-                      card.category,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.5,
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Center(
-                        child: Text(
-                          card.question,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey.shade800,
-                            height: 1.5,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 14),
-                    child: Text(
-                      'Swipe up to reveal →',
-                      style: TextStyle(fontSize: 10, color: Colors.grey.shade400, letterSpacing: 0.5),
-                    ),
-                  ),
-                ],
-              ),
-            );
+            return _FlashCardView(key: ValueKey(index), card: _cards[index]);
           },
+        ),
+      ),
+    );
+  }
+}
+
+/// A stateful card: tap to reveal the answer. The swiper keeps a card's State while
+/// it stays in the visible stack, so dragging or cancelling never resets it.
+class _FlashCardView extends StatefulWidget {
+  const _FlashCardView({super.key, required this.card});
+
+  final _FlashCard card;
+
+  @override
+  State<_FlashCardView> createState() => _FlashCardViewState();
+}
+
+class _FlashCardViewState extends State<_FlashCardView> {
+  bool _revealed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final card = widget.card;
+    return GestureDetector(
+      onTap: () => setState(() => _revealed = !_revealed),
+      child: Container(
+        width: 300,
+        height: 200,
+        decoration: BoxDecoration(
+          color: _revealed ? card.color : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 20, offset: const Offset(0, 8)),
+          ],
+        ),
+        child: Column(
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+              decoration: BoxDecoration(
+                color: card.color,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              ),
+              child: Text(
+                card.category,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.5,
+                ),
+              ),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Center(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 180),
+                    child: Text(
+                      _revealed ? card.answer : card.question,
+                      key: ValueKey(_revealed),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w600,
+                        color: _revealed ? Colors.white : Colors.grey.shade800,
+                        height: 1.5,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 14),
+              child: Text(
+                _revealed ? 'Swipe up for the next card' : 'Tap to reveal · swipe up for next',
+                style: TextStyle(
+                  fontSize: 10,
+                  color: _revealed ? Colors.white70 : Colors.grey.shade400,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -576,12 +653,17 @@ class TravelCardsExample extends StatelessWidget {
         backgroundColor: const Color(0xFF121212),
         foregroundColor: Colors.white,
       ),
-      body: Center(
-        child: FlipCardSwiper(
+      body: SwiperDemoBody(
+        itemCount: _destinations.length,
+        dark: true,
+        builder: (onCardChange) => FlipCardSwiper(
+          onCardChange: onCardChange,
           cardData: _destinations,
           animationDuration: const Duration(milliseconds: 900),
           completionPhaseScale: 1.35,
           downDragDuration: const Duration(milliseconds: 250),
+          perspectiveDepth: 0.003,
+          cardEdgeThickness: 10,
           cardEdgeColorBuilder: (i) => darken(_destinations[i].gradient.first, 0.25),
           cardBuilder: (context, index, visibleIndex) {
             if (index < 0 || index >= _destinations.length) {
@@ -707,13 +789,13 @@ class ProfileCardsExample extends StatelessWidget {
         backgroundColor: const Color(0xFF880E4F),
         foregroundColor: Colors.white,
       ),
-      body: Center(
-        child: FlipCardSwiper(
+      body: SwiperDemoBody(
+        itemCount: _profiles.length,
+        builder: (onCardChange) => FlipCardSwiper(
+          onCardChange: onCardChange,
           cardData: _profiles,
           animationDuration: const Duration(milliseconds: 600),
           cardEdgeThickness: 0,
-          perspectiveDepth: 0.002,
-          cardEdgeColorBuilder: (i) => darken(_profiles[i].avatarColor, 0.1),
           cardBuilder: (context, index, visibleIndex) {
             if (index < 0 || index >= _profiles.length) {
               return const SizedBox.shrink();
@@ -863,8 +945,10 @@ class MinimalCardsExample extends StatelessWidget {
         backgroundColor: const Color(0xFF212121),
         foregroundColor: Colors.white,
       ),
-      body: Center(
-        child: FlipCardSwiper(
+      body: SwiperDemoBody(
+        itemCount: _articles.length,
+        builder: (onCardChange) => FlipCardSwiper(
+          onCardChange: onCardChange,
           cardData: _articles,
           animationDuration: const Duration(milliseconds: 400),
           downDragDuration: const Duration(milliseconds: 120),

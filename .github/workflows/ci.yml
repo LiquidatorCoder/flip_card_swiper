@@ -29,7 +29,7 @@ jobs:
           (cd example && flutter pub get)
 
       - name: Check formatting
-        run: dart format --output=none --set-exit-if-changed lib test example/lib example/test
+        run: dart format --output=none --set-exit-if-changed lib test example/lib example/test example/integration_test
 
       - name: Analyze package
         run: flutter analyze
@@ -47,3 +47,64 @@ jobs:
 
       - name: Validate package for pub.dev
         run: flutter pub publish --dry-run
+
+  ios-e2e:
+    name: iOS simulator e2e
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.41.4
+          channel: stable
+          cache: true
+
+      - name: Boot an iPhone simulator
+        id: sim
+        run: |
+          UDID=$(xcrun simctl list devices available -j | python3 -c "
+          import json, sys
+          devices = json.load(sys.stdin)['devices']
+          for runtime in sorted(devices, reverse=True):
+              if 'iOS' in runtime:
+                  phones = [d for d in devices[runtime] if d['name'].startswith('iPhone')]
+                  if phones:
+                      print(phones[0]['udid']); break
+          ")
+          echo "Using simulator $UDID"
+          xcrun simctl boot "$UDID" || true  # already booted is fine
+          xcrun simctl bootstatus "$UDID" -b
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+
+      # Installing on a fresh hosted-runner simulator occasionally hangs before the first
+      # test starts; time out and retry once on a rebooted simulator. Test failures still
+      # fail the job (the retry fails the same way).
+      - name: Run e2e suite
+        id: e2e
+        timeout-minutes: 15
+        continue-on-error: true
+        working-directory: example
+        shell: bash
+        run: flutter test integration_test -d ${{ steps.sim.outputs.udid }} --reporter expanded | tee e2e.log
+
+      - name: Retry e2e suite on a rebooted simulator
+        if: steps.e2e.outcome != 'success'
+        timeout-minutes: 15
+        working-directory: example
+        shell: bash
+        run: |
+          xcrun simctl shutdown ${{ steps.sim.outputs.udid }} || true
+          xcrun simctl boot ${{ steps.sim.outputs.udid }}
+          xcrun simctl bootstatus ${{ steps.sim.outputs.udid }} -b
+          flutter test integration_test -d ${{ steps.sim.outputs.udid }} --reporter expanded | tee e2e.log
+
+      - name: Publish metrics
+        if: always()
+        working-directory: example
+        run: |
+          echo '### e2e metrics (iOS simulator, debug)' >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          grep -o 'METRIC .*' e2e.log | sed 's/^METRIC //' >> "$GITHUB_STEP_SUMMARY" || true
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
