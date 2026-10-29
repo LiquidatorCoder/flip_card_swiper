@@ -232,13 +232,14 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
   int? _dragLastSampleTimeUs;
   double _dragUpwardVelocityPxPerS = 0.0;
 
-  /// Scales base duration: slow upward motion -> longer completion; fast fling -> shorter.
+  /// Scales base duration: a slow release finishes a little slower than
+  /// [FlipCardSwiper.animationDuration]; a fling carries its momentum and finishes faster.
+  ///
+  /// Typical flings are 1000–3000 px/s, so the curve saturates at 3000 px/s. The floor
+  /// keeps the second half from compressing into a snap.
   double _velocityMultiplierForSecondHalf(double upwardVelocityPxPerSec) {
-    final double v = upwardVelocityPxPerSec.clamp(0.0, 8000.0);
-    // Floor so the second half never compresses to a near-instant snap (felt as a
-    // "jump" when auto-play continues after crossing the midpoint; also reads as
-    // "too fast" under slow-motion / time dilation).
-    return (1.55 - 1.05 * (v / 8000.0)).clamp(0.85, 1.55);
+    final double t = (upwardVelocityPxPerSec / 3000.0).clamp(0.0, 1.0);
+    return 1.15 - 0.45 * t;
   }
 
   int _completionDurationMsForRemaining(double remaining, double upwardVelocityPxPerSec) {

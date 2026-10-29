@@ -56,6 +56,19 @@ void main() {
     expect(h.changes, <int>[1]);
   });
 
+  testWidgets('a fling finishes faster than the base duration', (tester) async {
+    final h = await _pump(tester);
+
+    await _drag(tester, const Offset(0, -110), const Duration(milliseconds: 45), steps: 5);
+    final Stopwatch sw = Stopwatch()..start();
+    final int frames = await tester.pumpAndSettle(const Duration(milliseconds: 10));
+    sw.stop();
+
+    expect(h.changes, <int>[1]);
+    // ~60% of the flip remained at release: ~360 ms unscaled at 600 ms (was ~460 ms).
+    expect(frames * 10, lessThan(380), reason: 'fling took ${frames * 10} ms to finish');
+  });
+
   testWidgets('a short fast flick flips the card', (tester) async {
     final h = await _pump(tester);
 
