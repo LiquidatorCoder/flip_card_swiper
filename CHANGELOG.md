@@ -1,3 +1,12 @@
+## Unreleased
+
+- **Fix:** One slow or long drag could flip several cards in a row (up to the whole deck); a drag now flips at most one card.
+- **Fix:** A swipe started while the previous flip is finishing is no longer dropped; it finishes that flip and starts the next.
+- **Fix:** A short, fast upward flick now flips the card even before `thresholdValue` is reached.
+- **Fix:** Cancelled flips spring back without overshoot and stop ticking once settled (~300 ms instead of ~600 ms).
+- **Fix:** The arrow-up shortcut now works: tapping or dragging the stack gives it keyboard focus.
+- **Accessibility:** VoiceOver / TalkBack can flip the stack (increase or scroll-up action), and announce "N of M"; cards hidden underneath are no longer read out.
+
 ## 2.1.0
 
 - **3D edge support:** Cards now show a 3D edge effect during the flip. New `show3DEdge` parameter (and related options) let you tune the look.
