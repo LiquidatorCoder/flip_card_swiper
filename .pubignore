@@ -7,6 +7,6 @@ build/
 .fvm/
 .github/
 
+# Screenshots ship as WebP (listed in pubspec.yaml); the GIF and .mov sources stay in git only.
 screenshots/*.mov
-screenshots/colored.gif
-screenshots/white.gif
+screenshots/*.gif

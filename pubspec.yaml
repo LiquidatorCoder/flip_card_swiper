@@ -19,10 +19,10 @@ dev_dependencies:
 
 screenshots:
   - description: 3D edge flip effect.
-    path: screenshots/3d.gif
+    path: screenshots/3d.webp
   - description: Credit card style flip.
-    path: screenshots/credit.gif
+    path: screenshots/credit.webp
   - description: Minimal style flip.
-    path: screenshots/minimal.gif
+    path: screenshots/minimal.webp
 
 flutter:
