@@ -1,4 +1,4 @@
-## Unreleased
+## 2.2.0
 
 - **Fix (crash):** Changing `cardData` to a single card or to an empty list threw a `StackOverflowError` (the listener's reset re-notified itself forever).
 - **Fix:** Removing items from the same list instance (then `setState`) is now picked up instead of passing stale indices to `cardBuilder`.
@@ -17,6 +17,8 @@
 - **Feel:** Flings carry their momentum. The second half of a flung flip now runs at 0.7×–1.15× of `animationDuration` depending on release speed, instead of 0.85×–1.55× (which made most real flings *slower*). Fling release→settled is 35–60% shorter.
 - **Feel:** Pulling the stack down resists like a rubber band and eases toward `dragDownLimit`, instead of tracking 1:1 and then freezing.
 - **Accessibility:** With Reduce Motion on, a cancelled drag snaps back instead of running the spring (flips were already instant).
+- **Package size:** Screenshots ship as WebP, cutting the download from ~16 MB to ~2 MB.
+- **Example:** Six styles with a card counter, tap-to-reveal flash cards, adding and restoring cards at runtime, and an iOS e2e suite that reports latency and frame metrics.
 
 ## 2.1.0
 
