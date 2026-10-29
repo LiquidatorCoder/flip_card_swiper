@@ -52,6 +52,42 @@ void main() {
     expect(find.text("What does\nDRY stand for?"), findsOneWidget);
   });
 
+  testWidgets('Basic: removing cards down to none and restoring never crashes', (tester) async {
+    await tester.pumpWidget(const MyApp());
+    await _settle(tester);
+    await tester.tap(find.text('Basic'));
+    await _settle(tester);
+    final Finder swiper = find.byWidgetPredicate((w) => w is FlipCardSwiper);
+    final Offset center = tester.getCenter(swiper);
+
+    // Flip once so the stack is mid-deck, then shrink the deck card by card.
+    await _drag(tester, center, const Offset(0, -260), const Duration(milliseconds: 200));
+    await _settle(tester);
+    for (int remaining = 9; remaining >= 1; remaining--) {
+      await tester.tap(find.byKey(const Key('remove-card')));
+      await _settle(tester);
+      expect(tester.takeException(), isNull);
+      expect(_counterText(tester), '1 / $remaining');
+    }
+
+    // A single card cannot flip.
+    await _drag(tester, center, const Offset(0, -260), const Duration(milliseconds: 200));
+    await _settle(tester);
+    expect(_counterText(tester), '1 / 1');
+
+    await tester.tap(find.byKey(const Key('remove-card')));
+    await _settle(tester);
+    expect(tester.takeException(), isNull);
+    expect(_counterText(tester), 'No cards');
+
+    await tester.tap(find.byKey(const Key('reset-cards')));
+    await _settle(tester);
+    expect(_counterText(tester), '1 / 10');
+    await _drag(tester, center, const Offset(0, -260), const Duration(milliseconds: 200));
+    await _settle(tester);
+    expect(_counterText(tester), '2 / 10');
+  });
+
   for (final example in _examples) {
     group(example.title, () {
       testWidgets('flip, cancel, rebound, rapid flips and wrap-around', (tester) async {
@@ -186,6 +222,8 @@ void main() {
     });
   }
 }
+
+String _counterText(WidgetTester tester) => tester.widget<Text>(find.byKey(const Key('card-counter'))).data!;
 
 int _counter(WidgetTester tester) {
   final Text text = tester.widget<Text>(find.byKey(const Key('card-counter')));

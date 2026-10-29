@@ -170,6 +170,13 @@ class _SwiperDemoBodyState extends State<SwiperDemoBody> {
   int _index = 0;
 
   @override
+  void didUpdateWidget(SwiperDemoBody oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // A new deck restarts at its first card (onCardChange is not called for that).
+    if (oldWidget.itemCount != widget.itemCount) _index = 0;
+  }
+
+  @override
   Widget build(BuildContext context) {
     final Color fg = widget.dark ? Colors.white70 : Colors.black54;
     return Column(
@@ -178,7 +185,7 @@ class _SwiperDemoBodyState extends State<SwiperDemoBody> {
         Padding(
           padding: const EdgeInsets.only(bottom: 48),
           child: Text(
-            '${_index + 1} / ${widget.itemCount}',
+            widget.itemCount == 0 ? 'No cards' : '${_index + 1} / ${widget.itemCount}',
             key: const Key('card-counter'),
             style: TextStyle(
               color: fg,
@@ -198,10 +205,17 @@ class _SwiperDemoBodyState extends State<SwiperDemoBody> {
 // 0. Basic (original)
 // ─────────────────────────────────────────────────────────────
 
-class BasicExample extends StatelessWidget {
+/// Also shows changing [FlipCardSwiper.cardData] at runtime: remove cards down to
+/// none, then restore the deck. A new list resets the stack to its first card.
+class BasicExample extends StatefulWidget {
   const BasicExample({super.key});
 
-  static final List<Map<String, dynamic>> _cards = [
+  @override
+  State<BasicExample> createState() => _BasicExampleState();
+}
+
+class _BasicExampleState extends State<BasicExample> {
+  static final List<Map<String, dynamic>> _all = [
     {'color': Colors.blue, 'text': 'Card 1'},
     {'color': Colors.red, 'text': 'Card 2'},
     {'color': Colors.green, 'text': 'Card 3'},
@@ -214,6 +228,8 @@ class BasicExample extends StatelessWidget {
     {'color': Colors.brown, 'text': 'Card 10'},
   ];
 
+  List<Map<String, dynamic>> _cards = _all;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -222,6 +238,20 @@ class BasicExample extends StatelessWidget {
         title: const Text('Basic'),
         backgroundColor: const Color(0xFF546E7A),
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            key: const Key('remove-card'),
+            tooltip: 'Remove last card',
+            icon: const Icon(Icons.remove),
+            onPressed: _cards.isEmpty ? null : () => setState(() => _cards = _cards.sublist(0, _cards.length - 1)),
+          ),
+          IconButton(
+            key: const Key('reset-cards'),
+            tooltip: 'Restore all cards',
+            icon: const Icon(Icons.refresh),
+            onPressed: () => setState(() => _cards = _all),
+          ),
+        ],
       ),
       body: SwiperDemoBody(
         itemCount: _cards.length,
