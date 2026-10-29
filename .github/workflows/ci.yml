@@ -78,10 +78,27 @@ jobs:
           xcrun simctl bootstatus "$UDID" -b
           echo "udid=$UDID" >> "$GITHUB_OUTPUT"
 
+      # Installing on a fresh hosted-runner simulator occasionally hangs before the first
+      # test starts; time out and retry once on a rebooted simulator. Test failures still
+      # fail the job (the retry fails the same way).
       - name: Run e2e suite
+        id: e2e
+        timeout-minutes: 15
+        continue-on-error: true
         working-directory: example
         shell: bash
         run: flutter test integration_test -d ${{ steps.sim.outputs.udid }} --reporter expanded | tee e2e.log
+
+      - name: Retry e2e suite on a rebooted simulator
+        if: steps.e2e.outcome != 'success'
+        timeout-minutes: 15
+        working-directory: example
+        shell: bash
+        run: |
+          xcrun simctl shutdown ${{ steps.sim.outputs.udid }} || true
+          xcrun simctl boot ${{ steps.sim.outputs.udid }}
+          xcrun simctl bootstatus ${{ steps.sim.outputs.udid }} -b
+          flutter test integration_test -d ${{ steps.sim.outputs.udid }} --reporter expanded | tee e2e.log
 
       - name: Publish metrics
         if: always()
