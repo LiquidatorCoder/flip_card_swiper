@@ -36,7 +36,9 @@ class FlipCardSwiper<T> extends StatefulWidget {
   /// The maximum distance for a drag gesture to trigger animations.
   final double maxDragDistance;
 
-  /// The limit for dragging down before animation blocks further motion (non-positive).
+  /// How far (in logical pixels, non-positive) the stack can be pulled down. The pull
+  /// resists like a rubber band and approaches this limit; reaching the same finger
+  /// distance plays the "blocked" haptic.
   final double dragDownLimit;
 
   /// The threshold value for determining whether to complete the swipe animation (0–1).
@@ -729,9 +731,11 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
       }
     } else {
       _controller?.value = _startAnimationValue;
-      final double downDragOffset = dragDistance.clamp(_dragDownLimit, 0.0);
-      _dragOffset = -downDragOffset;
-      if (downDragOffset == _dragDownLimit) {
+      // Rubber band: 1:1 at first, then easing toward the limit instead of a hard stop.
+      final double limit = -_dragDownLimit;
+      final double pull = -dragDistance;
+      _dragOffset = limit <= 0.0 ? 0.0 : limit * (1.0 - math.exp(-pull / limit));
+      if (pull >= limit) {
         if (_shouldPlayVibration) {
           onCardBlockVibration();
           _shouldPlayVibration = false;

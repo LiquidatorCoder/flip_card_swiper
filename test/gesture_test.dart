@@ -122,6 +122,28 @@ void main() {
     expect(h.changes, <int>[1]);
   });
 
+  testWidgets('pulling down resists like a rubber band and never passes the limit', (tester) async {
+    await _pump(tester);
+    final double restY = tester.getCenter(find.text('card 0')).dy;
+    final Offset start = _center(tester);
+    final TestGesture g = await tester.startGesture(start);
+
+    Future<double> pullTo(double dy) async {
+      await g.moveTo(start + Offset(0, dy));
+      await tester.pump();
+      return tester.getCenter(find.text('card 0')).dy - restY;
+    }
+
+    await pullTo(20); // passes touch slop; the drag starts here
+    final double small = await pullTo(50);
+    final double far = await pullTo(320);
+    await g.up();
+    await tester.pumpAndSettle();
+
+    expect(small, inExclusiveRange(0, 30), reason: 'card should trail the finger');
+    expect(far, inInclusiveRange(30, 40), reason: 'card should approach, not pass, the 40 px limit');
+  });
+
   testWidgets('a downward drag rebounds without flipping', (tester) async {
     final h = await _pump(tester);
 
