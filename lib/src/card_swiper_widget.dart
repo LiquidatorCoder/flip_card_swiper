@@ -908,24 +908,57 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
     );
   }
 
-  /// Wraps [card] with thin edge strips at the top and bottom that are folded
-  /// 90° relative to the card face. They are invisible when the card is flat
-  /// (edge-on to the viewer) and rotate into view during the X-axis flip,
-  /// giving the card the appearance of real physical thickness.
+  /// One card of the deck: the card and its depth edges, both under [transform].
+  ///
+  /// The edges are a sibling of the card rather than drawn inside it. Each card has its
+  /// own repaint layer, which makes any transform above it composited, and a composited
+  /// transform records its children without its perspective. A strip folded 90° has no
+  /// height without that perspective, so it would be culled and never reach the screen.
+  ///
+  /// Keyed by data index so the deck's Stack moves this card's element when the z-order
+  /// changes at the midpoint, instead of rebuilding every card from scratch. Every layer
+  /// has this same shape, so a card keeps its element as it moves up the deck.
+  Widget _cardLayer({
+    required int dataIndex,
+    required Matrix4 transform,
+    required bool excludeSemantics,
+    double rotationDeg = 0.0,
+  }) {
+    return Stack(
+      key: ValueKey<int>(dataIndex),
+      clipBehavior: Clip.none,
+      children: <Widget>[
+        Transform(
+          alignment: Alignment.center,
+          transform: transform,
+          child: ExcludeSemantics(excluding: excludeSemantics, child: _cardFor(dataIndex)),
+        ),
+        Positioned.fill(
+          child: IgnorePointer(
+            child: Transform(
+              alignment: Alignment.center,
+              transform: transform,
+              child: _depthEdges(rotationDeg, dataIndex),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Thin edge strips at the top and bottom of a card, folded 90° relative to the card
+  /// face. They are invisible when the card is flat (edge-on to the viewer) and rotate
+  /// into view during the X-axis flip, giving the card the appearance of real thickness.
   /// Back-face culling: only render the edge whose front face points toward the
   /// viewer at [rotationDeg]. The top strip's normal z = -sin(rot) — visible when
   /// sin(rot) < 0. The bottom strip's normal z = +sin(rot) — visible when sin(rot) > 0.
-  Widget _wrapWithDepthEdges(Widget card, double rotationDeg, int cardIndex) {
+  Widget _depthEdges(double rotationDeg, int cardIndex) {
     final double t = widget.cardEdgeThickness;
-    if (t <= 0) return card;
-    final Color c = widget.cardEdgeColorBuilder?.call(cardIndex) ?? Colors.white;
-
     final double sinRot = math.sin(rotationDeg * math.pi / 180);
-    final bool showTopEdge = sinRot > 0;
-    final bool showBottomEdge = sinRot < 0;
-
-    // Keep the same Stack (card first) whether or not a strip is showing, so the
-    // card's element is never re-parented when the strips appear mid-flip.
+    final bool showTopEdge = t > 0 && sinRot > 0;
+    final bool showBottomEdge = t > 0 && sinRot < 0;
+    if (!showTopEdge && !showBottomEdge) return const SizedBox.shrink();
+    final Color c = widget.cardEdgeColorBuilder?.call(cardIndex) ?? Colors.white;
 
     // Before 76° the strip folds toward the viewer (+z, rotateX(-π/2)).
     // After 76° the card has passed vertical, so +z now points inward and
@@ -938,7 +971,6 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
     return Stack(
       clipBehavior: Clip.none,
       children: <Widget>[
-        card,
         if (showTopEdge)
           Positioned(
             top: 0,
@@ -971,8 +1003,6 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
     if (dataIndex == null) {
       return const SizedBox.shrink();
     }
-    final Widget cardWidget = _cardFor(dataIndex);
-
     final double controllerValue = _controller?.value ?? 0.0;
 
     double scale;
@@ -1011,18 +1041,16 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
     final double midFlipYOffset =
         flipAdjustBlend * (-widget.thirdCardOffsetStart) * (((_rotationAnimation?.value ?? 0) + 180) / 90);
 
-    // Keyed by data index so the Stack moves this card's element when the z-order
-    // changes at the midpoint, instead of rebuilding every card from scratch.
-    return Transform(
-      key: ValueKey<int>(dataIndex),
-      alignment: Alignment.center,
+    return _cardLayer(
+      dataIndex: dataIndex,
       transform: Matrix4.identity()
         ..translateByDouble(0.0, yOffset, 0, 1)
         ..translateByDouble(0.0, midFlipYOffset, 0, 1)
         ..setEntry(3, 2, widget.perspectiveDepth)
         ..rotateX(rotation * math.pi / 180)
         ..scaleByDouble(scale, scale, 1.0, 1),
-      child: ExcludeSemantics(excluding: _isCardSwitched, child: _wrapWithDepthEdges(cardWidget, rotation, dataIndex)),
+      excludeSemantics: _isCardSwitched,
+      rotationDeg: rotation,
     );
   }
 
@@ -1033,13 +1061,12 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
     final int? dataIndex = _indexAt(2);
     if (dataIndex == null) return const SizedBox.shrink();
     final double progress = (((_controller?.value ?? 0.0) - 0.5) / 0.5).clamp(0.0, 1.0);
-    return Transform(
-      key: ValueKey<int>(dataIndex),
-      alignment: Alignment.center,
+    return _cardLayer(
+      dataIndex: dataIndex,
       transform: Matrix4.identity()
         ..translateByDouble(0.0, widget.thirdCardOffsetStart * progress, 0, 1)
         ..scaleByDouble(widget.thirdCardScaleStart, widget.thirdCardScaleStart, 1.0, 1),
-      child: ExcludeSemantics(child: _wrapWithDepthEdges(_cardFor(dataIndex), 0.0, dataIndex)),
+      excludeSemantics: true,
     );
   }
 
@@ -1057,8 +1084,6 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
     if (dataIndex == null) {
       return const SizedBox.shrink();
     }
-    final Widget cardWidget = _cardFor(dataIndex);
-
     final double controllerValue = _controller?.value ?? 0.0;
 
     double initialOffset = 0.0;
@@ -1110,18 +1135,13 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
       scale = initialScale + (targetScale - initialScale) * progress;
     }
 
-    return Transform(
-      key: ValueKey<int>(dataIndex),
-      alignment: Alignment.center,
+    return _cardLayer(
+      dataIndex: dataIndex,
       transform: Matrix4.identity()
         ..translateByDouble(0.0, yOff, 0, 1)
         ..scaleByDouble(scale, scale, 1.0, 1),
       // Cards underneath are hidden from screen readers; only the top card is read.
-      // Same wrapper as the top layer, so a card keeps its element when it moves up.
-      child: ExcludeSemantics(
-        excluding: !(_isCardSwitched && index == 1),
-        child: _wrapWithDepthEdges(cardWidget, 0.0, dataIndex),
-      ),
+      excludeSemantics: !(_isCardSwitched && index == 1),
     );
   }
 }
