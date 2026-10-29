@@ -1,5 +1,7 @@
 ## Unreleased
 
+- **Fix (crash):** Changing `cardData` to a single card or to an empty list threw a `StackOverflowError` (the listener's reset re-notified itself forever).
+- **Fix:** Removing items from the same list instance (then `setState`) is now picked up instead of passing stale indices to `cardBuilder`.
 - **Fix:** One slow or long drag could flip several cards in a row (up to the whole deck); a drag now flips at most one card.
 - **Fix:** A swipe started while the previous flip is finishing is no longer dropped; it finishes that flip and starts the next.
 - **Fix:** A short, fast upward flick now flips the card even before `thresholdValue` is reached.

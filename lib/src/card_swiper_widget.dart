@@ -577,7 +577,9 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
 
         widget.onCardChange?.call(_dataIndices[0]);
       }
-    } else {
+    } else if ((_controller?.value ?? 0.0) != 0.0) {
+      // Guarded: reset() notifies this listener again, which recursed forever
+      // whenever cardData changed to a single card or none.
       _controller?.reset();
     }
   }
@@ -611,7 +613,10 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
   void didUpdateWidget(FlipCardSwiper<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    final bool dataChanged = !listEquals(widget.cardData, oldWidget.cardData);
+    // The length check also catches a list mutated in place (same instance on both
+    // widgets, so listEquals cannot see the change).
+    final bool dataChanged =
+        !listEquals(widget.cardData, oldWidget.cardData) || widget.cardData.length != _cardData.length;
     if (dataChanged) {
       _cancelCompletionWatchdog();
       _controller?.stop();
