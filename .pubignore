@@ -1,3 +1,12 @@
+# .pubignore replaces .gitignore for publishing, so repeat the generated paths here.
+.dart_tool/
+build/
+.idea/
+*.iml
+.vscode/
+.fvm/
+.github/
+
 screenshots/*.mov
 screenshots/colored.gif
 screenshots/white.gif
