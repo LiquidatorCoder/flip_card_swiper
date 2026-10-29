@@ -171,13 +171,13 @@ class FlipCardSwiper<T> extends StatefulWidget {
 }
 
 class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProviderStateMixin {
-  AnimationController? _controller;
-  Animation<double>? _yOffsetAnimation;
-  Animation<double>? _rotationAnimation;
-  Animation<double>? _liftBoostAnimation;
-  Animation<double>? _animation;
-  AnimationController? _downDragController;
-  Animation<double>? _downDragAnimation;
+  late final AnimationController _controller;
+  late final Animation<double> _yOffsetAnimation;
+  late final Animation<double> _rotationAnimation;
+  late Animation<double> _liftBoostAnimation;
+  late final Animation<double> _animation;
+  late final AnimationController _downDragController;
+  late Animation<double> _downDragAnimation;
 
   /// Single merge used by [AnimatedBuilder] (avoid reallocating each frame).
   late final Listenable _frameListenable;
@@ -245,7 +245,7 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
   }
 
   int _completionDurationMsForRemaining(double remaining, double upwardVelocityPxPerSec) {
-    final int baseMs = ((_controller?.duration?.inMilliseconds ?? 0) * remaining).round();
+    final int baseMs = ((_controller.duration?.inMilliseconds ?? 0) * remaining).round();
     if (baseMs <= 0) return 0;
     final double m = _velocityMultiplierForSecondHalf(upwardVelocityPxPerSec);
     final double scaled = baseMs * m * widget.completionPhaseScale;
@@ -270,8 +270,7 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
   /// = finger moving down); it is converted to controller units and fed into the
   /// spring so a fast downward fling snaps back more aggressively.
   void _springMainControllerToZero({double dragVelocityPxPerSec = 0.0}) {
-    final AnimationController? c = _controller;
-    if (c == null) return;
+    final AnimationController c = _controller;
     final double v = c.value;
     if (v <= 0.0) return;
     if (MediaQuery.disableAnimationsOf(context)) {
@@ -296,10 +295,10 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
 
   /// On pointer up: finish the flip toward 1.0 or spring back to 0 based on [controller] value.
   void _resolveFlipGestureEnd(DragEndDetails details) {
-    final AnimationController? c = _controller;
-    if (c == null || !mounted || _cardData.length <= 1) return;
+    final AnimationController c = _controller;
+    if (!mounted || _cardData.length <= 1) return;
 
-    if (_downDragController?.isAnimating == true) return;
+    if (_downDragController.isAnimating) return;
 
     // Let an in-flight [animateTo] / [forward] run unless we're clearly stuck.
     if (c.isAnimating) return;
@@ -340,8 +339,7 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
   /// Retries [animateTo] if completion was requested but the controller is idle mid-flight.
   void _tryResumeStuckCompletion() {
     if (!mounted) return;
-    final AnimationController? c = _controller;
-    if (c == null) return;
+    final AnimationController c = _controller;
     if (!_isAnimationBlocked) return;
     if (c.isAnimating) return;
     final double v = c.value;
@@ -363,11 +361,7 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
   ///
   /// A one-shot [Timer] watchdog retries [animateTo] if it never attaches.
   void _scheduleAnimateToEnd(double upwardVelocityPxPerSec) {
-    final AnimationController? c = _controller;
-    if (c == null) {
-      _resetGestureCompletionGates();
-      return;
-    }
+    final AnimationController c = _controller;
     if (c.value >= 1.0) {
       _resetGestureCompletionGates();
       return;
@@ -440,11 +434,11 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
   void _syncAnimationDurations(BuildContext context) {
     final main = _mainDuration(context);
     final down = _downDuration(context);
-    if (_controller != null && _controller!.duration != main) {
-      _controller!.duration = main;
+    if (_controller.duration != main) {
+      _controller.duration = main;
     }
-    if (_downDragController != null && _downDragController!.duration != down) {
-      _downDragController!.duration = down;
+    if (_downDragController.duration != down) {
+      _downDragController.duration = down;
     }
   }
 
@@ -494,28 +488,28 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
 
     _controller = AnimationController(duration: widget.animationDuration, vsync: this);
 
-    _animation = CurvedAnimation(parent: _controller!, curve: Curves.easeInOut);
+    _animation = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
 
     // Slightly higher first peak so the stack reads as “lift” before tilt.
     _yOffsetAnimation = TweenSequence<double>([
       TweenSequenceItem<double>(tween: Tween<double>(begin: 0.0, end: 0.55), weight: 44.0),
       TweenSequenceItem<double>(tween: Tween<double>(begin: 0.55, end: 0.0), weight: 56.0),
-    ]).animate(_animation!);
+    ]).animate(_animation);
 
     // Full-swipe rotation (same eased progress as the vertical bounce - no delayed
     // interval that bunches rotation at the end of the gesture).
-    _rotationAnimation = Tween<double>(begin: 0.0, end: -180.0).animate(_animation!);
+    _rotationAnimation = Tween<double>(begin: 0.0, end: -180.0).animate(_animation);
 
     _syncLiftAnimation();
 
     _downDragController = AnimationController(duration: widget.downDragDuration, vsync: this);
 
-    _downDragAnimation = Tween<double>(begin: 0.0, end: 0.0).animate(_downDragController!);
+    _downDragAnimation = Tween<double>(begin: 0.0, end: 0.0).animate(_downDragController);
 
-    _frameListenable = Listenable.merge(<Listenable>[_controller!, _downDragController!]);
+    _frameListenable = Listenable.merge(<Listenable>[_controller, _downDragController]);
 
-    _controller!.addListener(_onSwipeTick);
-    _controller!.addStatusListener(_onFlipAnimationStatus);
+    _controller.addListener(_onSwipeTick);
+    _controller.addStatusListener(_onFlipAnimationStatus);
   }
 
   /// One clean completion signal (avoids relying on [value] == 1.0 every tick).
@@ -527,11 +521,11 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
       _isCardSwitched = false;
       _hasReachedHalf = false;
       _isAnimationBlocked = false;
-      _controller?.reset();
+      _controller.reset();
       return;
     }
     _isCardSwitched = false;
-    _controller?.reset();
+    _controller.reset();
     _hasReachedHalf = false;
     _isAnimationBlocked = false;
   }
@@ -554,13 +548,13 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
           tween: Tween<double>(begin: 1.0, end: 0.0).chain(CurveTween(curve: Curves.easeInCubic)),
           weight: w2,
         ),
-      ]).animate(_controller!);
+      ]).animate(_controller);
     }
   }
 
   void _onSwipeTick() {
     if (_cardData.length > 1) {
-      if (!_isCardSwitched && (_controller?.value ?? 0.0) >= 0.5) {
+      if (!_isCardSwitched && _controller.value >= 0.5) {
         _poppedCardIndex = _dataIndices[0];
         final T firstCard = _cardData.removeAt(0);
         _dataIndices.removeAt(0);
@@ -577,10 +571,10 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
 
         widget.onCardChange?.call(_dataIndices[0]);
       }
-    } else if ((_controller?.value ?? 0.0) != 0.0) {
+    } else if (_controller.value != 0.0) {
       // Guarded: reset() notifies this listener again, which recursed forever
       // whenever cardData changed to a single card or none.
-      _controller?.reset();
+      _controller.reset();
     }
   }
 
@@ -619,8 +613,8 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
         !listEquals(widget.cardData, oldWidget.cardData) || widget.cardData.length != _cardData.length;
     if (dataChanged) {
       _cancelCompletionWatchdog();
-      _controller?.stop();
-      _downDragController?.stop();
+      _controller.stop();
+      _downDragController.stop();
 
       _resetStackFromWidgetData();
       _isCardSwitched = false;
@@ -630,8 +624,8 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
       _dragStartPosition = 0.0;
       _dragOffset = 0.0;
 
-      _controller?.reset();
-      _downDragController?.reset();
+      _controller.reset();
+      _downDragController.reset();
     }
 
     if (widget.animationDuration != oldWidget.animationDuration ||
@@ -648,10 +642,10 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
   @override
   void dispose() {
     _cancelCompletionWatchdog();
-    _controller?.removeListener(_onSwipeTick);
-    _controller?.removeStatusListener(_onFlipAnimationStatus);
-    _controller?.dispose();
-    _downDragController?.dispose();
+    _controller.removeListener(_onSwipeTick);
+    _controller.removeStatusListener(_onFlipAnimationStatus);
+    _controller.dispose();
+    _downDragController.dispose();
     _cancelHapticTimers();
     _focusNode.dispose();
     super.dispose();
@@ -660,10 +654,10 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
   /// If a committed flip is still finishing, jump it to the end so the next
   /// gesture starts from a resting stack instead of being dropped.
   void _finishCommittedFlip() {
-    final AnimationController? c = _controller;
+    final AnimationController c = _controller;
     // Only a committed flip: a spring-back (cancel) also animates "forward" in
     // [AnimationController.animateWith], but must never be completed.
-    if (c == null || !c.isAnimating || !_isAnimationBlocked) return;
+    if (!c.isAnimating || !_isAnimationBlocked) return;
     _cancelCompletionWatchdog();
     c.value = 1.0; // swaps (if not yet) and completes, which resets the stack.
   }
@@ -672,18 +666,18 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
   /// screen-reader actions).
   void _flipToNext() {
     if (_cardData.length <= 1) return;
-    if (_downDragController?.isAnimating == true) return;
+    if (_downDragController.isAnimating) return;
     _finishCommittedFlip();
-    if (_controller?.isAnimating == true) {
-      _controller?.stop();
+    if (_controller.isAnimating) {
+      _controller.stop();
     }
     final Duration d = _mainDuration(context);
     if (d == Duration.zero) {
-      _controller?.value = 1.0;
+      _controller.value = 1.0;
     } else {
       // Linear segment: [_animation] already applies Curves.easeInOut to controller
       // values; easeOut here would compose easeInOut(easeOut(t)) and bunch the flip.
-      _controller?.forward(from: 0.0);
+      _controller.forward(from: 0.0);
     }
     _isAnimationBlocked = true;
   }
@@ -692,7 +686,7 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
   void _onVerticalDragStart(DragStartDetails details) {
     _focusNode.requestFocus();
     _gestureCommitted = false;
-    if (_downDragController?.isAnimating == true || _cardData.length <= 1) {
+    if (_downDragController.isAnimating || _cardData.length <= 1) {
       return;
     }
     // A new swipe interrupts the tail of the previous flip (or a spring-back)
@@ -700,17 +694,17 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
     _finishCommittedFlip();
     _resetDragVelocitySamples();
     _isAnimationBlocked = false;
-    _startAnimationValue = _controller?.value ?? 0.0;
+    _startAnimationValue = _controller.value;
     _dragStartPosition = details.globalPosition.dy;
-    _controller?.stop(canceled: false);
-    _downDragController?.stop();
+    _controller.stop(canceled: false);
+    _downDragController.stop();
     _hasReachedHalf = false;
   }
 
   // Update the animation value based on the drag
   void _onVerticalDragUpdate(DragUpdateDetails details) {
-    if (_controller?.isAnimating == true ||
-        _downDragController?.isAnimating == true ||
+    if (_controller.isAnimating ||
+        _downDragController.isAnimating ||
         _hasReachedHalf ||
         _isAnimationBlocked ||
         _gestureCommitted ||
@@ -724,10 +718,10 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
       _sampleDragVelocity(details);
       final double dragFraction = dragDistance / _safeMaxDrag;
       final double newValue = (_startAnimationValue + dragFraction).clamp(0.0, 1.0);
-      _controller?.value = newValue;
+      _controller.value = newValue;
       _dragOffset = 0.0;
 
-      final double cv = _controller?.value ?? 0.0;
+      final double cv = _controller.value;
       // Require t in (0.5, 1) so we never schedule completion when the controller
       // already hit 1.0 in the same listener pass (would strand _hasReachedHalf).
       if (cv >= 0.5 && !_hasReachedHalf) {
@@ -739,7 +733,7 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
         }
       }
     } else {
-      _controller?.value = _startAnimationValue;
+      _controller.value = _startAnimationValue;
       // Rubber band: 1:1 at first, then easing toward the limit instead of a hard stop.
       final double limit = -_dragDownLimit;
       final double pull = -dragDistance;
@@ -768,13 +762,13 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
       _downDragAnimation = Tween<double>(
         begin: pull,
         end: 0.0,
-      ).animate(CurvedAnimation(parent: _downDragController!, curve: Curves.easeOutBack));
-      _downDragController?.forward(from: 0.0);
+      ).animate(CurvedAnimation(parent: _downDragController, curve: Curves.easeOutBack));
+      _downDragController.forward(from: 0.0);
       _shouldPlayVibration = true;
       return;
     }
 
-    if (_gestureCommitted && _controller?.isAnimating != true) {
+    if (_gestureCommitted && _controller.isAnimating == false) {
       // The flip this drag committed has already finished while the finger was down.
       _shouldPlayVibration = true;
       return;
@@ -787,17 +781,17 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
   }
 
   List<Widget> _buildStackedCards() {
-    final double yOffsetAnimationValue = _yOffsetAnimation?.value ?? 0.0;
-    final double rotation = _rotationAnimation?.value ?? 0.0;
+    final double yOffsetAnimationValue = _yOffsetAnimation.value;
+    final double rotation = _rotationAnimation.value;
     double totalYOffset =
         -yOffsetAnimationValue * _safeMaxDrag +
-        (_downDragController?.isAnimating == true ? _downDragAnimation?.value ?? 0.0 : _dragOffset);
+        (_downDragController.isAnimating ? _downDragAnimation.value : _dragOffset);
 
-    final double liftBoost = _liftBoostAnimation?.value ?? 0.0;
+    final double liftBoost = _liftBoostAnimation.value;
     totalYOffset -= liftBoost * widget.earlyLiftBoost * _safeMaxDrag;
 
     // Smooth the mid-swipe stack nudge (avoids a step at t == 0.5 that read as a pop).
-    final double cv = _controller?.value ?? 0.0;
+    final double cv = _controller.value;
     if (_cardData.length > 1) {
       const double nudgeFrom = 0.42;
       const double nudgeTo = 0.58;
@@ -1003,7 +997,7 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
     if (dataIndex == null) {
       return const SizedBox.shrink();
     }
-    final double controllerValue = _controller?.value ?? 0.0;
+    final double controllerValue = _controller.value;
 
     double scale;
     if (_cardData.length == 2) {
@@ -1039,7 +1033,7 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
         ? 0.0
         : Curves.easeInOut.transform(((controllerValue - 0.5) / flipAdjustRamp).clamp(0.0, 1.0));
     final double midFlipYOffset =
-        flipAdjustBlend * (-widget.thirdCardOffsetStart) * (((_rotationAnimation?.value ?? 0) + 180) / 90);
+        flipAdjustBlend * (-widget.thirdCardOffsetStart) * ((_rotationAnimation.value + 180) / 90);
 
     return _cardLayer(
       dataIndex: dataIndex,
@@ -1060,7 +1054,7 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
   Widget _buildIncomingCardLayer() {
     final int? dataIndex = _indexAt(2);
     if (dataIndex == null) return const SizedBox.shrink();
-    final double progress = (((_controller?.value ?? 0.0) - 0.5) / 0.5).clamp(0.0, 1.0);
+    final double progress = ((_controller.value - 0.5) / 0.5).clamp(0.0, 1.0);
     return _cardLayer(
       dataIndex: dataIndex,
       transform: Matrix4.identity()
@@ -1084,7 +1078,7 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
     if (dataIndex == null) {
       return const SizedBox.shrink();
     }
-    final double controllerValue = _controller?.value ?? 0.0;
+    final double controllerValue = _controller.value;
 
     double initialOffset = 0.0;
     double initialScale = 1.0;
