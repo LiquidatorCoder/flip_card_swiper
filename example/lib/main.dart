@@ -11,10 +11,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Flip Card Swiper Examples',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-      ),
+      theme: ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple), useMaterial3: true),
       home: const ExamplesHome(),
     );
   }
@@ -121,10 +118,7 @@ class _ExampleTile extends StatelessWidget {
       elevation: 2,
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => entry.page),
-        ),
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => entry.page)),
         child: Padding(
           padding: const EdgeInsets.all(20),
           child: Row(
@@ -132,10 +126,7 @@ class _ExampleTile extends StatelessWidget {
               Container(
                 width: 56,
                 height: 56,
-                decoration: BoxDecoration(
-                  color: entry.color,
-                  borderRadius: BorderRadius.circular(14),
-                ),
+                decoration: BoxDecoration(color: entry.color, borderRadius: BorderRadius.circular(14)),
                 child: Icon(entry.icon, color: Colors.white, size: 28),
               ),
               const SizedBox(width: 16),
@@ -143,13 +134,9 @@ class _ExampleTile extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(entry.title,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w700, fontSize: 16)),
+                    Text(entry.title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
                     const SizedBox(height: 4),
-                    Text(entry.subtitle,
-                        style: TextStyle(
-                            fontSize: 12, color: Colors.grey.shade600)),
+                    Text(entry.subtitle, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
                   ],
                 ),
               ),
@@ -201,8 +188,7 @@ class BasicExample extends StatelessWidget {
           animationDuration: const Duration(milliseconds: 600),
           downDragDuration: const Duration(milliseconds: 200),
           onCardChange: (index) {},
-          cardEdgeColorBuilder: (index) =>
-              darken(_cards[index]['color'] as Color, 0.1),
+          cardEdgeColorBuilder: (index) => darken(_cards[index]['color'] as Color, 0.1),
           cardBuilder: (context, index, visibleIndex) {
             if (index < 0 || index >= _cards.length) {
               return const SizedBox.shrink();
@@ -212,20 +198,12 @@ class BasicExample extends StatelessWidget {
               key: ValueKey<int>(index),
               decoration: BoxDecoration(
                 color: card['color'] as Color,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.1),
-                    blurRadius: 40,
-                  )
-                ],
+                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 40)],
               ),
               width: 300,
               height: 200,
               alignment: Alignment.center,
-              child: Text(
-                card['text'] as String,
-                style: const TextStyle(color: Colors.black45, fontSize: 12),
-              ),
+              child: Text(card['text'] as String, style: const TextStyle(color: Colors.black45, fontSize: 12)),
             );
           },
         ),
@@ -236,9 +214,7 @@ class BasicExample extends StatelessWidget {
 
 Color darken(Color color, double amount) {
   final hsl = HSLColor.fromColor(color);
-  return hsl
-      .withLightness((hsl.lightness - amount).clamp(0.0, 1.0))
-      .toColor();
+  return hsl.withLightness((hsl.lightness - amount).clamp(0.0, 1.0)).toColor();
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -306,11 +282,7 @@ class CreditCardsExample extends StatelessWidget {
               height: 195,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(20),
-                gradient: LinearGradient(
-                  colors: card.gradient,
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
+                gradient: LinearGradient(colors: card.gradient, begin: Alignment.topLeft, end: Alignment.bottomRight),
                 boxShadow: [
                   BoxShadow(
                     color: card.gradient.first.withValues(alpha: 0.5),
@@ -326,18 +298,24 @@ class CreditCardsExample extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('BANK',
-                          style: TextStyle(
-                              color: Colors.white54,
-                              fontSize: 11,
-                              letterSpacing: 3,
-                              fontWeight: FontWeight.w600)),
-                      Text(card.network,
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w900,
-                              fontSize: 14,
-                              letterSpacing: 2)),
+                      const Text(
+                        'BANK',
+                        style: TextStyle(
+                          color: Colors.white54,
+                          fontSize: 11,
+                          letterSpacing: 3,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Text(
+                        card.network,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 14,
+                          letterSpacing: 2,
+                        ),
+                      ),
                     ],
                   ),
                   const Spacer(),
@@ -345,18 +323,18 @@ class CreditCardsExample extends StatelessWidget {
                   Container(
                     width: 36,
                     height: 26,
-                    decoration: BoxDecoration(
-                      color: Colors.amber.shade300,
-                      borderRadius: BorderRadius.circular(5),
-                    ),
+                    decoration: BoxDecoration(color: Colors.amber.shade300, borderRadius: BorderRadius.circular(5)),
                   ),
                   const SizedBox(height: 12),
-                  Text(card.number,
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 15,
-                          letterSpacing: 2,
-                          fontFamily: 'monospace')),
+                  Text(
+                    card.number,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      letterSpacing: 2,
+                      fontFamily: 'monospace',
+                    ),
+                  ),
                   const SizedBox(height: 10),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -364,29 +342,24 @@ class CreditCardsExample extends StatelessWidget {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('CARD HOLDER',
-                              style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.5),
-                                  fontSize: 9,
-                                  letterSpacing: 1)),
-                          Text(card.name,
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600)),
+                          Text(
+                            'CARD HOLDER',
+                            style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 9, letterSpacing: 1),
+                          ),
+                          Text(
+                            card.name,
+                            style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+                          ),
                         ],
                       ),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          Text('EXPIRES',
-                              style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.5),
-                                  fontSize: 9,
-                                  letterSpacing: 1)),
-                          Text(card.expiry,
-                              style: const TextStyle(
-                                  color: Colors.white, fontSize: 13)),
+                          Text(
+                            'EXPIRES',
+                            style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 9, letterSpacing: 1),
+                          ),
+                          Text(card.expiry, style: const TextStyle(color: Colors.white, fontSize: 13)),
                         ],
                       ),
                     ],
@@ -485,52 +458,51 @@ class FlashCardsExample extends StatelessWidget {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.08),
-                    blurRadius: 20,
-                    offset: const Offset(0, 8),
-                  ),
+                  BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 20, offset: const Offset(0, 8)),
                 ],
               ),
               child: Column(
                 children: [
                   Container(
                     width: double.infinity,
-                    padding:
-                        const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                     decoration: BoxDecoration(
                       color: card.color,
-                      borderRadius: const BorderRadius.vertical(
-                          top: Radius.circular(16)),
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
                     ),
-                    child: Text(card.category,
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 1.5)),
+                    child: Text(
+                      card.category,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
                   ),
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsets.all(20),
                       child: Center(
-                        child: Text(card.question,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.grey.shade800,
-                                height: 1.5)),
+                        child: Text(
+                          card.question,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey.shade800,
+                            height: 1.5,
+                          ),
+                        ),
                       ),
                     ),
                   ),
                   Padding(
                     padding: const EdgeInsets.only(bottom: 14),
-                    child: Text('Swipe up to reveal →',
-                        style: TextStyle(
-                            fontSize: 10,
-                            color: Colors.grey.shade400,
-                            letterSpacing: 0.5)),
+                    child: Text(
+                      'Swipe up to reveal →',
+                      style: TextStyle(fontSize: 10, color: Colors.grey.shade400, letterSpacing: 0.5),
+                    ),
                   ),
                 ],
               ),
@@ -547,12 +519,7 @@ class _FlashCard {
   final String answer;
   final String category;
   final Color color;
-  const _FlashCard({
-    required this.question,
-    required this.answer,
-    required this.category,
-    required this.color,
-  });
+  const _FlashCard({required this.question, required this.answer, required this.category, required this.color});
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -615,8 +582,7 @@ class TravelCardsExample extends StatelessWidget {
           animationDuration: const Duration(milliseconds: 900),
           completionPhaseScale: 1.35,
           downDragDuration: const Duration(milliseconds: 250),
-          cardEdgeColorBuilder: (i) =>
-              darken(_destinations[i].gradient.first, 0.25),
+          cardEdgeColorBuilder: (i) => darken(_destinations[i].gradient.first, 0.25),
           cardBuilder: (context, index, visibleIndex) {
             if (index < 0 || index >= _destinations.length) {
               return const SizedBox.shrink();
@@ -627,11 +593,7 @@ class TravelCardsExample extends StatelessWidget {
               width: 320,
               height: 210,
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: dest.gradient,
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
+                gradient: LinearGradient(colors: dest.gradient, begin: Alignment.topLeft, end: Alignment.bottomRight),
                 boxShadow: [
                   BoxShadow(
                     color: dest.gradient.first.withValues(alpha: 0.4),
@@ -646,23 +608,21 @@ class TravelCardsExample extends StatelessWidget {
                 children: [
                   Text(dest.emoji, style: const TextStyle(fontSize: 40)),
                   const Spacer(),
-                  Text(dest.city,
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 28,
-                          fontWeight: FontWeight.w800,
-                          height: 1.1)),
-                  Text(dest.country,
-                      style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.7),
-                          fontSize: 13,
-                          letterSpacing: 1.5,
-                          fontWeight: FontWeight.w500)),
+                  Text(
+                    dest.city,
+                    style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w800, height: 1.1),
+                  ),
+                  Text(
+                    dest.country,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.7),
+                      fontSize: 13,
+                      letterSpacing: 1.5,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                   const SizedBox(height: 8),
-                  Text(dest.tagline,
-                      style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.55),
-                          fontSize: 12)),
+                  Text(dest.tagline, style: TextStyle(color: Colors.white.withValues(alpha: 0.55), fontSize: 12)),
                 ],
               ),
             );
@@ -753,8 +713,7 @@ class ProfileCardsExample extends StatelessWidget {
           animationDuration: const Duration(milliseconds: 600),
           cardEdgeThickness: 0,
           perspectiveDepth: 0.002,
-          cardEdgeColorBuilder: (i) =>
-              darken(_profiles[i].avatarColor, 0.1),
+          cardEdgeColorBuilder: (i) => darken(_profiles[i].avatarColor, 0.1),
           cardBuilder: (context, index, visibleIndex) {
             if (index < 0 || index >= _profiles.length) {
               return const SizedBox.shrink();
@@ -768,11 +727,7 @@ class ProfileCardsExample extends StatelessWidget {
                 color: p.bgColor,
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.07),
-                    blurRadius: 20,
-                    offset: const Offset(0, 6),
-                  ),
+                  BoxShadow(color: Colors.black.withValues(alpha: 0.07), blurRadius: 20, offset: const Offset(0, 6)),
                 ],
               ),
               padding: const EdgeInsets.all(22),
@@ -782,16 +737,12 @@ class ProfileCardsExample extends StatelessWidget {
                   Container(
                     width: 64,
                     height: 64,
-                    decoration: BoxDecoration(
-                      color: p.avatarColor,
-                      shape: BoxShape.circle,
-                    ),
+                    decoration: BoxDecoration(color: p.avatarColor, shape: BoxShape.circle),
                     alignment: Alignment.center,
-                    child: Text(p.initials,
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 22,
-                            fontWeight: FontWeight.w700)),
+                    child: Text(
+                      p.initials,
+                      style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w700),
+                    ),
                   ),
                   const SizedBox(width: 18),
                   Expanded(
@@ -799,37 +750,33 @@ class ProfileCardsExample extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text(p.name,
-                            style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w800,
-                                color: Color(0xFF1A1A1A))),
+                        Text(
+                          p.name,
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF1A1A1A)),
+                        ),
                         const SizedBox(height: 3),
-                        Text(p.role,
-                            style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey.shade600,
-                                fontWeight: FontWeight.w500)),
+                        Text(
+                          p.role,
+                          style: TextStyle(fontSize: 12, color: Colors.grey.shade600, fontWeight: FontWeight.w500),
+                        ),
                         const SizedBox(height: 14),
                         Wrap(
                           spacing: 6,
                           runSpacing: 6,
                           children: p.tags
-                              .map((t) => Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 10, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: p.avatarColor
-                                          .withValues(alpha: 0.12),
-                                      borderRadius:
-                                          BorderRadius.circular(20),
-                                    ),
-                                    child: Text(t,
-                                        style: TextStyle(
-                                            fontSize: 10,
-                                            color: p.avatarColor,
-                                            fontWeight: FontWeight.w700)),
-                                  ))
+                              .map(
+                                (t) => Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: p.avatarColor.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text(
+                                    t,
+                                    style: TextStyle(fontSize: 10, color: p.avatarColor, fontWeight: FontWeight.w700),
+                                  ),
+                                ),
+                              )
                               .toList(),
                         ),
                       ],
@@ -939,11 +886,7 @@ class MinimalCardsExample extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: const Color(0xFFE0E0E0)),
                 boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.04),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
+                  BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 12, offset: const Offset(0, 4)),
                 ],
               ),
               padding: const EdgeInsets.all(22),
@@ -951,45 +894,43 @@ class MinimalCardsExample extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: a.tagColor,
-                      borderRadius: BorderRadius.circular(4),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(color: a.tagColor, borderRadius: BorderRadius.circular(4)),
+                    child: Text(
+                      a.tag,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1.2,
+                      ),
                     ),
-                    child: Text(a.tag,
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 9,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 1.2)),
                   ),
                   const SizedBox(height: 12),
-                  Text(a.headline,
-                      style: const TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w700,
-                          height: 1.35,
-                          color: Color(0xFF111111))),
+                  Text(
+                    a.headline,
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                      height: 1.35,
+                      color: Color(0xFF111111),
+                    ),
+                  ),
                   const Spacer(),
                   Row(
                     children: [
-                      Text(a.source,
-                          style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.grey.shade500,
-                              fontWeight: FontWeight.w600)),
+                      Text(
+                        a.source,
+                        style: TextStyle(fontSize: 11, color: Colors.grey.shade500, fontWeight: FontWeight.w600),
+                      ),
                       const SizedBox(width: 8),
                       Container(
-                          width: 3,
-                          height: 3,
-                          decoration: BoxDecoration(
-                              color: Colors.grey.shade400,
-                              shape: BoxShape.circle)),
+                        width: 3,
+                        height: 3,
+                        decoration: BoxDecoration(color: Colors.grey.shade400, shape: BoxShape.circle),
+                      ),
                       const SizedBox(width: 8),
-                      Text(a.time,
-                          style: TextStyle(
-                              fontSize: 11, color: Colors.grey.shade500)),
+                      Text(a.time, style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
                     ],
                   ),
                 ],
