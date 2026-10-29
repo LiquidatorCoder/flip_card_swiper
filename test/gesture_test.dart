@@ -56,6 +56,19 @@ void main() {
     expect(h.changes, <int>[1]);
   });
 
+  testWidgets('a fling finishes faster than the base duration', (tester) async {
+    final h = await _pump(tester);
+
+    await _drag(tester, const Offset(0, -110), const Duration(milliseconds: 45), steps: 5);
+    final Stopwatch sw = Stopwatch()..start();
+    final int frames = await tester.pumpAndSettle(const Duration(milliseconds: 10));
+    sw.stop();
+
+    expect(h.changes, <int>[1]);
+    // ~60% of the flip remained at release: ~360 ms unscaled at 600 ms (was ~460 ms).
+    expect(frames * 10, lessThan(380), reason: 'fling took ${frames * 10} ms to finish');
+  });
+
   testWidgets('a short fast flick flips the card', (tester) async {
     final h = await _pump(tester);
 
@@ -92,7 +105,7 @@ void main() {
 
     await _drag(tester, const Offset(0, -45), const Duration(milliseconds: 500));
     await tester.pump(const Duration(milliseconds: 16)); // spring-back in flight
-    await _drag(tester, const Offset(0, -35), const Duration(milliseconds: 400));
+    await _drag(tester, const Offset(0, -15), const Duration(milliseconds: 400));
     await tester.pumpAndSettle();
 
     expect(h.changes, isEmpty);
@@ -109,6 +122,28 @@ void main() {
     expect(h.changes, <int>[1]);
   });
 
+  testWidgets('pulling down resists like a rubber band and never passes the limit', (tester) async {
+    await _pump(tester);
+    final double restY = tester.getCenter(find.text('card 0')).dy;
+    final Offset start = _center(tester);
+    final TestGesture g = await tester.startGesture(start);
+
+    Future<double> pullTo(double dy) async {
+      await g.moveTo(start + Offset(0, dy));
+      await tester.pump();
+      return tester.getCenter(find.text('card 0')).dy - restY;
+    }
+
+    await pullTo(20); // passes touch slop; the drag starts here
+    final double small = await pullTo(50);
+    final double far = await pullTo(320);
+    await g.up();
+    await tester.pumpAndSettle();
+
+    expect(small, inExclusiveRange(0, 30), reason: 'card should trail the finger');
+    expect(far, inInclusiveRange(30, 40), reason: 'card should approach, not pass, the 40 px limit');
+  });
+
   testWidgets('a downward drag rebounds without flipping', (tester) async {
     final h = await _pump(tester);
 
@@ -116,5 +151,57 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(h.changes, isEmpty);
+  });
+
+  testWidgets('with reduced motion a cancelled drag snaps back immediately', (tester) async {
+    final List<int> changes = <int>[];
+    await tester.pumpWidget(
+      MediaQuery(
+        data: const MediaQueryData(disableAnimations: true),
+        child: MaterialApp(
+          home: Center(
+            child: FlipCardSwiper<int>(
+              cardData: const <int>[0, 1, 2],
+              onCardChange: changes.add,
+              cardBuilder: (context, index, visibleIndex) =>
+                  SizedBox(width: 300, height: 200, child: Text('card $index')),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await _drag(tester, const Offset(0, -45), const Duration(milliseconds: 500));
+    final int frames = await tester.pumpAndSettle();
+
+    expect(changes, isEmpty);
+    expect(frames, lessThanOrEqualTo(2));
+  });
+
+  testWidgets('arrow up works after tapping a card that handles taps itself', (tester) async {
+    final List<int> changes = <int>[];
+    int taps = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Center(
+          child: FlipCardSwiper<int>(
+            cardData: const <int>[0, 1, 2],
+            onCardChange: changes.add,
+            cardBuilder: (context, index, visibleIndex) => GestureDetector(
+              onTap: () => taps++,
+              child: SizedBox(width: 300, height: 200, child: Text('card $index')),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('card 0'));
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    await tester.pumpAndSettle();
+
+    expect(taps, 1, reason: "the card's own tap still fires");
+    expect(changes, <int>[1]);
   });
 }

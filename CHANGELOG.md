@@ -4,12 +4,17 @@
 - **Fix:** A swipe started while the previous flip is finishing is no longer dropped; it finishes that flip and starts the next.
 - **Fix:** A short, fast upward flick now flips the card even before `thresholdValue` is reached.
 - **Fix:** Cancelled flips spring back without overshoot and stop ticking once settled (~300 ms instead of ~600 ms).
-- **Fix:** The arrow-up shortcut now works: tapping or dragging the stack gives it keyboard focus.
+- **Fix:** The arrow-up shortcut now works: touching the stack gives it keyboard focus, even when a card handles taps itself.
 - **Accessibility:** VoiceOver / TalkBack can flip the stack (increase or scroll-up action), and announce "N of M"; cards hidden underneath are no longer read out.
 - **Fix:** `cardBuilder` can now use inherited widgets such as `Theme.of(context)`; previously it threw because cards were built in `initState`.
 - **Fix:** Cards rebuild when the parent rebuilds with a new `cardBuilder` (they were cached until `cardData` changed).
 - **Fix:** Cards keep their `State` through a flip. Every flip used to remount the visible cards, so images reloaded and stateful cards reset.
 - **Fix:** Fired haptic timers are released instead of accumulating for the widget's lifetime.
+- **Performance:** Each card paints into its own layer, so only its transform changes per frame. UI-thread frame time during flips drops ~30–40% for cards with shadows and gradients (iOS simulator).
+- **Look:** The end of a flip no longer pops. The flipped card used to land on the third slot and then swap for the next card in the deck on the last frame. Now the next card slides out from behind the deck and the flipped card tucks in underneath it.
+- **Feel:** Flings carry their momentum. The second half of a flung flip now runs at 0.7×–1.15× of `animationDuration` depending on release speed, instead of 0.85×–1.55× (which made most real flings *slower*). Fling release→settled is 35–60% shorter.
+- **Feel:** Pulling the stack down resists like a rubber band and eases toward `dragDownLimit`, instead of tracking 1:1 and then freezing.
+- **Accessibility:** With Reduce Motion on, a cancelled drag snaps back instead of running the spring (flips were already instant).
 
 ## 2.1.0
 

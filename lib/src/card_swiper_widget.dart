@@ -36,7 +36,9 @@ class FlipCardSwiper<T> extends StatefulWidget {
   /// The maximum distance for a drag gesture to trigger animations.
   final double maxDragDistance;
 
-  /// The limit for dragging down before animation blocks further motion (non-positive).
+  /// How far (in logical pixels, non-positive) the stack can be pulled down. The pull
+  /// resists like a rubber band and approaches this limit; reaching the same finger
+  /// distance plays the "blocked" haptic.
   final double dragDownLimit;
 
   /// The threshold value for determining whether to complete the swipe animation (0–1).
@@ -232,13 +234,14 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
   int? _dragLastSampleTimeUs;
   double _dragUpwardVelocityPxPerS = 0.0;
 
-  /// Scales base duration: slow upward motion -> longer completion; fast fling -> shorter.
+  /// Scales base duration: a slow release finishes a little slower than
+  /// [FlipCardSwiper.animationDuration]; a fling carries its momentum and finishes faster.
+  ///
+  /// Typical flings are 1000–3000 px/s, so the curve saturates at 3000 px/s. The floor
+  /// keeps the second half from compressing into a snap.
   double _velocityMultiplierForSecondHalf(double upwardVelocityPxPerSec) {
-    final double v = upwardVelocityPxPerSec.clamp(0.0, 8000.0);
-    // Floor so the second half never compresses to a near-instant snap (felt as a
-    // "jump" when auto-play continues after crossing the midpoint; also reads as
-    // "too fast" under slow-motion / time dilation).
-    return (1.55 - 1.05 * (v / 8000.0)).clamp(0.85, 1.55);
+    final double t = (upwardVelocityPxPerSec / 3000.0).clamp(0.0, 1.0);
+    return 1.15 - 0.45 * t;
   }
 
   int _completionDurationMsForRemaining(double remaining, double upwardVelocityPxPerSec) {
@@ -271,6 +274,10 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
     if (c == null) return;
     final double v = c.value;
     if (v <= 0.0) return;
+    if (MediaQuery.disableAnimationsOf(context)) {
+      c.value = 0.0; // Reduce Motion: no spring.
+      return;
+    }
     // Downward finger motion drives the controller toward 0 — negative velocity
     // in controller-value units. Clamp to avoid an overly violent spring.
     final double ctrlVelocity = -(dragVelocityPxPerSec / _safeMaxDrag).clamp(0.0, 8.0);
@@ -580,13 +587,17 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
     _builtCards.clear();
     for (int position = 0; position < math.min(_dataIndices.length, 3); position++) {
       final int index = _dataIndices[position];
-      _builtCards[index] = widget.cardBuilder(context, index, position);
+      _builtCards[index] = _isolate(widget.cardBuilder(context, index, position));
     }
     final int? popped = _poppedCardIndex;
     if (_isCardSwitched && popped != null && !_builtCards.containsKey(popped)) {
-      _builtCards[popped] = widget.cardBuilder(context, popped, 0);
+      _builtCards[popped] = _isolate(widget.cardBuilder(context, popped, 0));
     }
   }
+
+  /// Gives each card its own layer: only its transform changes per frame, so the
+  /// card's content (shadows, gradients, text) is recorded once instead of every frame.
+  Widget _isolate(Widget card) => RepaintBoundary(child: card);
 
   Widget _cardFor(int? index) => (index == null ? null : _builtCards[index]) ?? const SizedBox.shrink();
 
@@ -724,9 +735,11 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
       }
     } else {
       _controller?.value = _startAnimationValue;
-      final double downDragOffset = dragDistance.clamp(_dragDownLimit, 0.0);
-      _dragOffset = -downDragOffset;
-      if (downDragOffset == _dragDownLimit) {
+      // Rubber band: 1:1 at first, then easing toward the limit instead of a hard stop.
+      final double limit = -_dragDownLimit;
+      final double pull = -dragDistance;
+      _dragOffset = limit <= 0.0 ? 0.0 : limit * (1.0 - math.exp(-pull / limit));
+      if (pull >= limit) {
         if (_shouldPlayVibration) {
           onCardBlockVibration();
           _shouldPlayVibration = false;
@@ -806,6 +819,10 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
         for (int i = 0; i < cardCount; i++) {
           if (i == 0) {
             stackChildren.add(_buildTopCardLayer(totalYOffset, rotation));
+            // The card that becomes third waits at its resting slot just above the
+            // tucking card, which slides in underneath and ends fully hidden - so the
+            // reset at the end of the flip changes nothing on screen.
+            if (_cardData.length > 3) stackChildren.add(_buildIncomingCardLayer());
           } else {
             stackChildren.add(_buildCardLayer(cardCount - i));
           }
@@ -860,21 +877,25 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
           }
           return KeyEventResult.ignored;
         },
-        child: RepaintBoundary(
-          child: GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            // Semantic drags from this detector never move, so they could not flip;
-            // the Semantics above provides working increase / scroll-up actions.
-            excludeFromSemantics: true,
-            onTapDown: (_) => _focusNode.requestFocus(),
-            onVerticalDragStart: _onVerticalDragStart,
-            onVerticalDragUpdate: _onVerticalDragUpdate,
-            onVerticalDragEnd: _onVerticalDragEnd,
-            child: AnimatedBuilder(
-              animation: _frameListenable,
-              builder: (BuildContext context, Widget? child) {
-                return Stack(alignment: Alignment.center, children: _buildStackedCards());
-              },
+        // Take focus on any pointer down. A Listener is outside the gesture arena, so this
+        // works even when a card's own tap handler wins the tap.
+        child: Listener(
+          onPointerDown: (_) => _focusNode.requestFocus(),
+          child: RepaintBoundary(
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              // Semantic drags from this detector never move, so they could not flip;
+              // the Semantics above provides working increase / scroll-up actions.
+              excludeFromSemantics: true,
+              onVerticalDragStart: _onVerticalDragStart,
+              onVerticalDragUpdate: _onVerticalDragUpdate,
+              onVerticalDragEnd: _onVerticalDragEnd,
+              child: AnimatedBuilder(
+                animation: _frameListenable,
+                builder: (BuildContext context, Widget? child) {
+                  return Stack(alignment: Alignment.center, children: _buildStackedCards());
+                },
+              ),
             ),
           ),
         ),
@@ -882,24 +903,57 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
     );
   }
 
-  /// Wraps [card] with thin edge strips at the top and bottom that are folded
-  /// 90° relative to the card face. They are invisible when the card is flat
-  /// (edge-on to the viewer) and rotate into view during the X-axis flip,
-  /// giving the card the appearance of real physical thickness.
+  /// One card of the deck: the card and its depth edges, both under [transform].
+  ///
+  /// The edges are a sibling of the card rather than drawn inside it. Each card has its
+  /// own repaint layer, which makes any transform above it composited, and a composited
+  /// transform records its children without its perspective. A strip folded 90° has no
+  /// height without that perspective, so it would be culled and never reach the screen.
+  ///
+  /// Keyed by data index so the deck's Stack moves this card's element when the z-order
+  /// changes at the midpoint, instead of rebuilding every card from scratch. Every layer
+  /// has this same shape, so a card keeps its element as it moves up the deck.
+  Widget _cardLayer({
+    required int dataIndex,
+    required Matrix4 transform,
+    required bool excludeSemantics,
+    double rotationDeg = 0.0,
+  }) {
+    return Stack(
+      key: ValueKey<int>(dataIndex),
+      clipBehavior: Clip.none,
+      children: <Widget>[
+        Transform(
+          alignment: Alignment.center,
+          transform: transform,
+          child: ExcludeSemantics(excluding: excludeSemantics, child: _cardFor(dataIndex)),
+        ),
+        Positioned.fill(
+          child: IgnorePointer(
+            child: Transform(
+              alignment: Alignment.center,
+              transform: transform,
+              child: _depthEdges(rotationDeg, dataIndex),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Thin edge strips at the top and bottom of a card, folded 90° relative to the card
+  /// face. They are invisible when the card is flat (edge-on to the viewer) and rotate
+  /// into view during the X-axis flip, giving the card the appearance of real thickness.
   /// Back-face culling: only render the edge whose front face points toward the
   /// viewer at [rotationDeg]. The top strip's normal z = -sin(rot) — visible when
   /// sin(rot) < 0. The bottom strip's normal z = +sin(rot) — visible when sin(rot) > 0.
-  Widget _wrapWithDepthEdges(Widget card, double rotationDeg, int cardIndex) {
+  Widget _depthEdges(double rotationDeg, int cardIndex) {
     final double t = widget.cardEdgeThickness;
-    if (t <= 0) return card;
-    final Color c = widget.cardEdgeColorBuilder?.call(cardIndex) ?? Colors.white;
-
     final double sinRot = math.sin(rotationDeg * math.pi / 180);
-    final bool showTopEdge = sinRot > 0;
-    final bool showBottomEdge = sinRot < 0;
-
-    // Keep the same Stack (card first) whether or not a strip is showing, so the
-    // card's element is never re-parented when the strips appear mid-flip.
+    final bool showTopEdge = t > 0 && sinRot > 0;
+    final bool showBottomEdge = t > 0 && sinRot < 0;
+    if (!showTopEdge && !showBottomEdge) return const SizedBox.shrink();
+    final Color c = widget.cardEdgeColorBuilder?.call(cardIndex) ?? Colors.white;
 
     // Before 76° the strip folds toward the viewer (+z, rotateX(-π/2)).
     // After 76° the card has passed vertical, so +z now points inward and
@@ -912,7 +966,6 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
     return Stack(
       clipBehavior: Clip.none,
       children: <Widget>[
-        card,
         if (showTopEdge)
           Positioned(
             top: 0,
@@ -945,8 +998,6 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
     if (dataIndex == null) {
       return const SizedBox.shrink();
     }
-    final Widget cardWidget = _cardFor(dataIndex);
-
     final double controllerValue = _controller?.value ?? 0.0;
 
     double scale;
@@ -985,18 +1036,32 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
     final double midFlipYOffset =
         flipAdjustBlend * (-widget.thirdCardOffsetStart) * (((_rotationAnimation?.value ?? 0) + 180) / 90);
 
-    // Keyed by data index so the Stack moves this card's element when the z-order
-    // changes at the midpoint, instead of rebuilding every card from scratch.
-    return Transform(
-      key: ValueKey<int>(dataIndex),
-      alignment: Alignment.center,
+    return _cardLayer(
+      dataIndex: dataIndex,
       transform: Matrix4.identity()
         ..translateByDouble(0.0, yOffset, 0, 1)
         ..translateByDouble(0.0, midFlipYOffset, 0, 1)
         ..setEntry(3, 2, widget.perspectiveDepth)
         ..rotateX(rotation * math.pi / 180)
         ..scaleByDouble(scale, scale, 1.0, 1),
-      child: ExcludeSemantics(excluding: _isCardSwitched, child: _wrapWithDepthEdges(cardWidget, rotation, dataIndex)),
+      excludeSemantics: _isCardSwitched,
+      rotationDeg: rotation,
+    );
+  }
+
+  /// The card that becomes third once the flip completes. At the swap it sits exactly
+  /// behind the card ahead of it, then slides out to the third slot's rest pose over
+  /// the second half, so it emerges from the deck instead of appearing at once.
+  Widget _buildIncomingCardLayer() {
+    final int? dataIndex = _indexAt(2);
+    if (dataIndex == null) return const SizedBox.shrink();
+    final double progress = (((_controller?.value ?? 0.0) - 0.5) / 0.5).clamp(0.0, 1.0);
+    return _cardLayer(
+      dataIndex: dataIndex,
+      transform: Matrix4.identity()
+        ..translateByDouble(0.0, widget.thirdCardOffsetStart * progress, 0, 1)
+        ..scaleByDouble(widget.thirdCardScaleStart, widget.thirdCardScaleStart, 1.0, 1),
+      excludeSemantics: true,
     );
   }
 
@@ -1014,8 +1079,6 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
     if (dataIndex == null) {
       return const SizedBox.shrink();
     }
-    final Widget cardWidget = _cardFor(dataIndex);
-
     final double controllerValue = _controller?.value ?? 0.0;
 
     double initialOffset = 0.0;
@@ -1067,18 +1130,13 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
       scale = initialScale + (targetScale - initialScale) * progress;
     }
 
-    return Transform(
-      key: ValueKey<int>(dataIndex),
-      alignment: Alignment.center,
+    return _cardLayer(
+      dataIndex: dataIndex,
       transform: Matrix4.identity()
         ..translateByDouble(0.0, yOff, 0, 1)
         ..scaleByDouble(scale, scale, 1.0, 1),
       // Cards underneath are hidden from screen readers; only the top card is read.
-      // Same wrapper as the top layer, so a card keeps its element when it moves up.
-      child: ExcludeSemantics(
-        excluding: !(_isCardSwitched && index == 1),
-        child: _wrapWithDepthEdges(cardWidget, 0.0, dataIndex),
-      ),
+      excludeSemantics: !(_isCardSwitched && index == 1),
     );
   }
 }
