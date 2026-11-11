@@ -59,6 +59,11 @@ class FlipCardSwiper<T> extends StatefulWidget {
   /// When false, haptic feedback is not triggered.
   final bool enableHaptics;
 
+  /// Flips the stack from code, e.g. to auto-play it on a timer.
+  ///
+  /// See [FlipCardSwiperController.flipToNext].
+  final FlipCardSwiperController? controller;
+
   /// Short description for assistive technologies (e.g. TalkBack).
   final String? semanticsLabel;
 
@@ -151,6 +156,7 @@ class FlipCardSwiper<T> extends StatefulWidget {
     this.cardEdgeThickness = 6.0,
     this.cardEdgeColorBuilder,
     this.cardBorderRadius,
+    this.controller,
     super.key,
   }) : assert(maxDragDistance > 0),
        assert(thresholdValue >= 0 && thresholdValue <= 1),
@@ -168,6 +174,59 @@ class FlipCardSwiper<T> extends StatefulWidget {
 
   @override
   State<FlipCardSwiper<T>> createState() => _FlipCardSwiperState<T>();
+}
+
+/// Flips a [FlipCardSwiper] from code.
+///
+/// Pass it as [FlipCardSwiper.controller], then call [flipToNext], for example
+/// from a [Timer] to auto-play the stack:
+///
+/// ```dart
+/// final controller = FlipCardSwiperController();
+/// Timer.periodic(const Duration(seconds: 5), (_) => controller.flipToNext());
+/// ```
+///
+/// A controller can drive one swiper at a time. It holds no resources, so it
+/// needs no `dispose`.
+class FlipCardSwiperController {
+  _FlipCardSwiperState<dynamic>? _state;
+
+  /// Whether a [FlipCardSwiper] is currently using this controller.
+  bool get isAttached => _state != null;
+
+  /// Whether a finger (or other pointer) is down on the stack.
+  bool get isUserTouching => _state?._isTouched ?? false;
+
+  /// Whether a flip or a spring-back is still running.
+  bool get isAnimating => _state?._isAnimating ?? false;
+
+  /// Flips the top card to the back of the stack with the same animation as the
+  /// keyboard and screen-reader flips, and calls [FlipCardSwiper.onCardChange].
+  ///
+  /// Does nothing, and returns false, when no swiper is attached, the user is
+  /// touching the stack, a flip or spring-back is still running, or there is
+  /// only one card. A timer that calls this can simply skip a beat instead of
+  /// interrupting the user.
+  bool flipToNext() {
+    final _FlipCardSwiperState<dynamic>? state = _state;
+    if (state == null || state._isTouched || state._isAnimating || state._cardData.length <= 1) {
+      return false;
+    }
+    state._flipToNext();
+    return true;
+  }
+
+  void _attach(_FlipCardSwiperState<dynamic> state) {
+    assert(
+      _state == null || identical(_state, state),
+      'A FlipCardSwiperController can only be used by one FlipCardSwiper at a time.',
+    );
+    _state = state;
+  }
+
+  void _detach(_FlipCardSwiperState<dynamic> state) {
+    if (identical(_state, state)) _state = null;
+  }
 }
 
 class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProviderStateMixin {
@@ -198,6 +257,14 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
   static const double _flingCommitVelocity = 700.0;
 
   final FocusNode _focusNode = FocusNode(debugLabel: 'FlipCardSwiper');
+
+  /// Pointers currently down on the stack, so [FlipCardSwiperController.flipToNext]
+  /// never flips a card out from under a finger.
+  int _pointersDown = 0;
+
+  bool get _isTouched => _pointersDown > 0;
+
+  bool get _isAnimating => _controller.isAnimating || _downDragController.isAnimating;
 
   late List<T> _cardData;
 
@@ -483,6 +550,7 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
   @override
   void initState() {
     super.initState();
+    widget.controller?._attach(this);
 
     _resetStackFromWidgetData();
 
@@ -607,6 +675,11 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
   void didUpdateWidget(FlipCardSwiper<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
 
+    if (widget.controller != oldWidget.controller) {
+      oldWidget.controller?._detach(this);
+      widget.controller?._attach(this);
+    }
+
     // The length check also catches a list mutated in place (same instance on both
     // widgets, so listEquals cannot see the change).
     final bool dataChanged =
@@ -641,6 +714,7 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
 
   @override
   void dispose() {
+    widget.controller?._detach(this);
     _cancelCompletionWatchdog();
     _controller.removeListener(_onSwipeTick);
     _controller.removeStatusListener(_onFlipAnimationStatus);
@@ -876,10 +950,16 @@ class _FlipCardSwiperState<T> extends State<FlipCardSwiper<T>> with TickerProvid
           }
           return KeyEventResult.ignored;
         },
-        // Take focus on any pointer down. A Listener is outside the gesture arena, so this
-        // works even when a card's own tap handler wins the tap.
+        // Take focus on any pointer down, and count pointers for the controller. A Listener
+        // is outside the gesture arena, so this works even when a card's own tap handler
+        // wins the tap.
         child: Listener(
-          onPointerDown: (_) => _focusNode.requestFocus(),
+          onPointerDown: (_) {
+            _pointersDown++;
+            _focusNode.requestFocus();
+          },
+          onPointerUp: (_) => _pointersDown = math.max(0, _pointersDown - 1),
+          onPointerCancel: (_) => _pointersDown = math.max(0, _pointersDown - 1),
           child: RepaintBoundary(
             child: GestureDetector(
               behavior: HitTestBehavior.translucent,
