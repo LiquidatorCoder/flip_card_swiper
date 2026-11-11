@@ -53,6 +53,9 @@
 - **Accessibility and keyboard:**  
   Screen readers announce the position ("2 of 5") and can flip with the increase / scroll-up action; cards hidden underneath are not read. Touch the stack and press **↑** to flip from a keyboard. Optional **`semanticsLabel`** / **`semanticsHint`**, and the platform’s **reduce motion** setting (`MediaQuery.disableAnimations`) is respected.
 
+- **Flip from code:**  
+  Pass a **`FlipCardSwiperController`** and call **`flipToNext()`** to flip with the same animation as the keyboard, for example from a timer to auto-play the stack. It skips the flip while a finger is on the stack or a flip is still running, so auto-play never fights the user.
+
 - **Reordering:**  
   Cards swap order halfway through the flip so you can loop through a list without a hard cut. The next card slides out from behind the deck as the flipped card tucks in, and cards keep their `State` while they are visible-so stateful, themed or image cards just work.
 
@@ -131,10 +134,58 @@ class MyApp extends StatelessWidget {
       ),
     );
   }
+}```
+
+### Flip from code (auto-play)
+
+Give the swiper a `FlipCardSwiperController` and call `flipToNext()`. It uses the same animation as the keyboard and screen-reader flips and calls `onCardChange`. It does nothing, and returns `false`, while a pointer is down on the stack, while a flip or spring-back is still running, when only one card is left, or when no swiper is attached, so a timer can call it blindly and simply skips that beat.
+
+```dart
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flip_card_swiper/flip_card_swiper.dart';
+
+class AutoPlayDeck extends StatefulWidget {
+  const AutoPlayDeck({super.key, required this.cards});
+
+  final List<String> cards;
+
+  @override
+  State<AutoPlayDeck> createState() => _AutoPlayDeckState();
 }
 
+class _AutoPlayDeckState extends State<AutoPlayDeck> {
+  final FlipCardSwiperController _controller = FlipCardSwiperController();
+  late final Timer _timer;
 
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 5), (_) => _controller.flipToNext());
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FlipCardSwiper<String>(
+      controller: _controller,
+      cardData: widget.cards,
+      cardBuilder: (context, index, visibleIndex) => Card(
+        key: ValueKey(index),
+        child: SizedBox(width: 300, height: 200, child: Center(child: Text(widget.cards[index]))),
+      ),
+    );
+  }
+}
 ```
+
+`isAttached`, `isUserTouching` and `isAnimating` report the swiper's state if you want to pause or reset your own timer. A controller drives one swiper at a time and needs no `dispose`.
 
 ## Example and tests
 

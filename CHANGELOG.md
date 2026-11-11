@@ -1,3 +1,7 @@
+## Unreleased
+
+- **Feature:** `FlipCardSwiperController` flips the stack from code (e.g. auto-play on a timer). Pass it as the new `controller` parameter and call `flipToNext()`; it uses the keyboard flip's animation and calls `onCardChange`. It skips the flip, returning `false`, while a pointer is down on the stack, while a flip or spring-back runs, or when only one card is left. `isAttached`, `isUserTouching` and `isAnimating` expose the swiper's state.
+
 ## 2.2.0
 
 - **Fix (crash):** Changing `cardData` to a single card or to an empty list threw a `StackOverflowError` (the listener's reset re-notified itself forever).
